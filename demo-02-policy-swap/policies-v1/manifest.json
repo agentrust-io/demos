@@ -1,0 +1,5 @@
+{
+  "version": "1",
+  "policies": ["allow-all.cedar"],
+  "schema": "schema.cedarschema"
+}

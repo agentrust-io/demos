@@ -1,0 +1,7 @@
+{
+  "version": "1",
+  "policies": [
+    "allow-filesystem-tools.cedar"
+  ],
+  "schema": "schema.cedarschema"
+}

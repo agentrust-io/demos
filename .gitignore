@@ -1,0 +1,8 @@
+workspace/
+*.db
+audit.db
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/

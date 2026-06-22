@@ -1,0 +1,5 @@
+{
+  "version": "1",
+  "policies": ["deny-write.cedar"],
+  "schema": "schema.cedarschema"
+}
