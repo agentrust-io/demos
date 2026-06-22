@@ -1,5 +1,6 @@
 {
-  "version": "1",
-  "policies": ["allow-all.cedar"],
-  "schema": "schema.cedarschema"
+  "version": "1.0.0",
+  "authored_at": "2026-06-23T00:00:00Z",
+  "author_identity": "demo-operator@agentrust.io",
+  "commit_sha": "demo-v1-allow-all"
 }

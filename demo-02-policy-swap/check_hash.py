@@ -1,15 +1,23 @@
 """
-Compute the policy bundle hash for a given policies/ directory.
+Compute the cMCP policy bundle hash for a given policies/ directory.
 
-cMCP computes the bundle hash as:
-  sha256(sorted JSON of all .cedar file contents + manifest.json)
+The bundle hash is defined in cmcp_runtime.policy.bundle._canonical_bundle_hash:
 
-This script computes and prints the hash for both policy sets,
-so you can show the mismatch in the demo before starting cMCP.
+  sha256(canonical_json({
+    "manifest": <full manifest.json contents>,
+    "policy_files": {<filename>: sha256_hex(file_bytes)},  # sorted by filename
+    "schema_hash": sha256_hex(schema.cedarschema bytes)
+  }, sort_keys=True, separators=(",",":")))
 
 Usage:
+  # Print hashes for both policy sets
   python check_hash.py
+
+  # Print hash for a single bundle directory (for scripting)
+  python check_hash.py ./policies-v1
 """
+
+from __future__ import annotations
 
 import hashlib
 import json
@@ -17,35 +25,50 @@ import pathlib
 import sys
 
 
+def sha256_hex(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
 def bundle_hash(policies_dir: pathlib.Path) -> str:
-    manifest = json.loads((policies_dir / "manifest.json").read_text())
-    # Build a deterministic representation: manifest + sorted policy content
-    bundle = {
-        "manifest": manifest,
-        "policies": {
-            name: (policies_dir / name).read_text()
-            for name in sorted(manifest["policies"])
-        },
-        "schema": (policies_dir / manifest["schema"]).read_text(),
+    manifest = json.loads((policies_dir / "manifest.json").read_bytes())
+    schema_bytes = (policies_dir / "schema.cedarschema").read_bytes()
+
+    policy_hashes: dict[str, str] = {
+        p.name: sha256_hex(p.read_bytes())
+        for p in sorted(policies_dir.glob("*.cedar"))
     }
-    raw = json.dumps(bundle, sort_keys=True, ensure_ascii=True).encode()
-    return "sha256:" + hashlib.sha256(raw).hexdigest()
+
+    canonical = json.dumps(
+        {
+            "manifest": manifest,
+            "policy_files": policy_hashes,
+            "schema_hash": sha256_hex(schema_bytes),
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    )
+    return "sha256:" + sha256_hex(canonical.encode())
 
 
-def main():
+def main() -> None:
+    # Single-arg mode: print just the hash for one directory (used in run.sh)
+    if len(sys.argv) == 2:
+        print(bundle_hash(pathlib.Path(sys.argv[1])))
+        return
+
     base = pathlib.Path(__file__).parent
-    for label, path in [("v1 (allow-all)", base / "policies-v1"),
-                        ("v2 (deny-write)", base / "policies-v2")]:
-        h = bundle_hash(path)
-        print(f"{label}:\n  {h}\n")
-
     h1 = bundle_hash(base / "policies-v1")
     h2 = bundle_hash(base / "policies-v2")
+
+    print(f"v1 (allow-all):\n  {h1}\n")
+    print(f"v2 (deny file.write):\n  {h2}\n")
+
     if h1 != h2:
-        print("Hashes differ — policy swap is detectable by any verifier")
-        print("that pinned the v1 hash in expected_policy_hash.")
+        print("Hashes differ — a verifier that pinned the v1 hash will")
+        print("detect POLICY_HASH_MISMATCH on any claim from the v2 gateway.")
     else:
-        print("WARNING: hashes are identical (policy files have same content)")
+        print("WARNING: hashes are identical (policy content unchanged)")
 
 
 if __name__ == "__main__":

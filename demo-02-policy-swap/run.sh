@@ -1,84 +1,65 @@
 #!/usr/bin/env bash
 # Demo 2: Policy swap = attestation failure
 #
-# Shows that swapping the Cedar policy bundle changes the policy.bundle_hash
-# in the TRACE claim. A verifier that pinned the original hash rejects the new claim.
+# Shows that swapping the Cedar policy bundle changes policy.bundle_hash
+# in the TRACE claim. A verifier that pinned the v1 hash will detect
+# POLICY_HASH_MISMATCH on any claim produced after the policy was swapped.
 #
-# On real Intel TDX hardware, the policy hash is incorporated into RTMR[2] at
-# startup — so the TEE measurement itself changes, not just the claim field.
+# On real Intel TDX hardware, the policy hash flows into RTMR[2] at startup —
+# the TEE measurement itself changes, not just the claim field.
 # With CMCP_DEV_MODE=1, only the claim field changes (measurement stays zeros),
 # but the verifier check is identical either way.
 #
-# Usage: bash run.sh
+# Depends on demo-01 having been run first (workspace/trace-claim.json needed).
+#
+# Usage: bash demo-02-policy-swap/run.sh   (from repo root)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-echo "=== Step 0: Compute policy hashes before starting cMCP ==="
+CLAIM_PATH="$REPO_ROOT/workspace/trace-claim.json"
+if [[ ! -f "$CLAIM_PATH" ]]; then
+  echo "Run demo-01 first to produce a TRACE claim:"
+  echo "  bash demo-01-cmcp-in-action/run.sh"
+  exit 1
+fi
+
+echo ""
+echo "=== Demo 2: Policy swap = attestation failure ==="
+echo ""
+
+echo "-- Step 1: Policy bundle hashes --"
 python "$SCRIPT_DIR/check_hash.py"
 
-echo "=== Step 1: Start MCP filesystem server ==="
-cd "$REPO_ROOT/server"
-python server.py &
-SERVER_PID=$!
-sleep 1
-
-echo "=== Step 2: Start cMCP with v1 policy ==="
-cd "$SCRIPT_DIR"
-CMCP_DEV_MODE=1 cmcp start --config cmcp-config.yaml --policy-bundle-path ./policies-v1/ &
-CMCP_PID=$!
-sleep 2
+# Extract hashes for use in verification (avoid fragile grep)
+V1_HASH=$(python "$SCRIPT_DIR/check_hash.py" "$SCRIPT_DIR/policies-v1")
+V2_HASH=$(python "$SCRIPT_DIR/check_hash.py" "$SCRIPT_DIR/policies-v2")
 
 echo ""
-echo "=== Step 3: write_file succeeds under v1 policy ==="
-python -c "
-import json, time, urllib.request
-payload = json.dumps({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'write_file','arguments':{'path':'demo.txt','content':'hello from v1 policy'}}}).encode()
-req = urllib.request.Request('http://localhost:8443/mcp', data=payload, headers={'Content-Type':'application/json'}, method='POST')
-resp = json.loads(urllib.request.urlopen(req, timeout=10).read())
-trace = resp.get('result',{}).get('trace_claim',{})
-print('  policy.bundle_hash (v1):', trace.get('policy',{}).get('bundle_hash','(not in response)'))
-print('  call result:', resp.get('result',{}).get('content',[{}])[0].get('text',''))
+echo "-- Step 2: v1 TRACE claim from demo-01 --"
+python3 -c "
+import json, pathlib
+claim = json.loads(pathlib.Path('$CLAIM_PATH').read_text())
+bundle_hash = claim['trace']['policy']['bundle_hash']
+print(f'  claim.trace.policy.bundle_hash: {bundle_hash}')
+print()
+print('  This hash was committed at cMCP startup (in RTMR[2] on real TDX).')
+print('  A verifier who approved the v1 bundle pins this value.')
 "
 
 echo ""
-echo "=== Step 4: Swap policy to v2 (reload cMCP) ==="
-kill $CMCP_PID 2>/dev/null || true
-wait $CMCP_PID 2>/dev/null || true
-sleep 1
-CMCP_DEV_MODE=1 cmcp start --config cmcp-config.yaml --policy-bundle-path ./policies-v2/ &
-CMCP_PID=$!
-sleep 2
+echo "-- Step 3: Verify v1 claim with v1 hash → passes --"
+cmcp verify "$CLAIM_PATH" --policy-hash "$V1_HASH" || true
 
 echo ""
-echo "=== Step 5: write_file is DENIED under v2 policy ==="
-python -c "
-import json, time, urllib.request
-payload = json.dumps({'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'write_file','arguments':{'path':'demo.txt','content':'should fail'}}}).encode()
-req = urllib.request.Request('http://localhost:8443/mcp', data=payload, headers={'Content-Type':'application/json'}, method='POST')
-resp = json.loads(urllib.request.urlopen(req, timeout=10).read())
-trace = resp.get('result',{}).get('trace_claim',{})
-print('  policy.bundle_hash (v2):', trace.get('policy',{}).get('bundle_hash','(not in response)'))
-error = resp.get('error', resp.get('result',{}).get('error',''))
-print('  call result: DENIED -', error)
-" || python -c "
-import json, urllib.request, urllib.error
-payload = json.dumps({'jsonrpc':'2.0','id':2,'method':'tools/call','params':{'name':'write_file','arguments':{'path':'demo.txt','content':'should fail'}}}).encode()
-req = urllib.request.Request('http://localhost:8443/mcp', data=payload, headers={'Content-Type':'application/json'}, method='POST')
-try:
-    resp = json.loads(urllib.request.urlopen(req, timeout=10).read())
-    print(json.dumps(resp, indent=2))
-except urllib.error.HTTPError as e:
-    print('HTTP error:', e.code, e.read().decode())
-"
+echo "-- Step 4: Verify v1 claim with v2 hash → POLICY_HASH_MISMATCH --"
+echo "  (Simulates a verifier that approved v1 being shown a claim from"
+echo "   a gateway that loaded the swapped v2 bundle)"
+cmcp verify "$CLAIM_PATH" --policy-hash "$V2_HASH" || true
 
 echo ""
-echo "=== v2 hash differs from v1 — verifier with pinned v1 hash would REJECT ==="
-echo "(On real TDX hardware, RTMR[2] itself would mismatch; no claim would be accepted)"
-
-# Cleanup
-kill $CMCP_PID $SERVER_PID 2>/dev/null || true
-wait $CMCP_PID $SERVER_PID 2>/dev/null || true
+echo "  On real TDX hardware: swapping the policy bundle changes RTMR[2]."
+echo "  No claim from the v2 gateway can pass v1 verification — the TEE"
+echo "  measurement itself is different, not just a claim field."
 echo ""
-echo "Done."

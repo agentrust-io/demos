@@ -1,13 +1,13 @@
 # agentrust-io demos
 
-Runnable demos for [cMCP](https://github.com/agentrust-io/cmcp) and [TRACE](https://github.com/agentrust-io/trace-spec). Three demos, ~4 minutes total.
+Runnable demos for [cMCP](https://github.com/agentrust-io/cmcp). Three demos, ~4 minutes total.
 
 ---
 
 ## Prerequisites
 
 ```bash
-pip install cmcp-runtime agentrust-trace mcp uvicorn
+pip install cmcp-runtime cmcp-verify starlette uvicorn
 ```
 
 All demos use `CMCP_DEV_MODE=1` (software-only TEE, no hardware required). The local MCP server performs real filesystem operations on `./workspace/`.
@@ -16,56 +16,53 @@ All demos use `CMCP_DEV_MODE=1` (software-only TEE, no hardware required). The l
 
 ## Demo 1 — cMCP in action (~90 seconds)
 
-Cedar policy is enforced by the cMCP runtime. Every tool call produces a TRACE claim carrying the policy bundle hash. On real Intel TDX hardware, this hash is incorporated into RTMR[2] at startup; here it appears in `policy.bundle_hash` in the claim.
+Cedar policy is enforced by the cMCP runtime. Three tool calls route through the gateway. On real Intel TDX hardware, the policy bundle hash is committed into RTMR[2] at startup; in dev mode it appears only in the claim field.
 
 ```bash
-cd demo-01-cmcp-in-action
-bash run.sh
+bash demo-01-cmcp-in-action/run.sh
 ```
 
 What you see:
-- cMCP starts, computes the policy bundle hash
-- `write_file` call is evaluated against the Cedar policy (allowed)
-- TRACE claim shows `runtime.platform`, `runtime.measurement`, `policy.bundle_hash`
-- The file appears in `./workspace/hello.txt`
+- `file.write` — ALLOWED by Cedar policy, file appears in `workspace/hello.txt`
+- `file.read` — ALLOWED, reads the file back
+- `file.list` — DENIED (HTTP 403, Cedar forbid rule matches)
+- Signed TRACE claim with `runtime.platform`, `runtime.measurement`, `policy.bundle_hash`
 
 ---
 
-## Demo 2 — Policy swap = attestation failure (~90 seconds)
+## Demo 2 — Policy swap = attestation failure (~60 seconds)
 
-The operator swaps the Cedar policy bundle (v1 → v2). The TRACE claim's `policy.bundle_hash` changes. A verifier that pinned the v1 hash rejects all claims from the reloaded runtime.
+Two Cedar policy bundles are compared. v1 allows all tools; v2 denies `file.write`. Their hashes differ. A verifier that pinned the v1 hash detects `POLICY_HASH_MISMATCH` on any claim produced by a v2 gateway.
 
-On real TDX hardware, swapping the policy at startup changes RTMR[2] — the measurement itself mismatches, so the TEE attestation quote is rejected before any claim is evaluated.
+On real TDX hardware, swapping the policy at startup changes RTMR[2] — the TEE measurement itself mismatches, so the attestation quote is rejected before any claim is evaluated.
+
+Requires demo-01 to have run first (uses `workspace/trace-claim.json`).
 
 ```bash
-cd demo-02-policy-swap
-bash run.sh
+bash demo-02-policy-swap/run.sh
 ```
 
 What you see:
-- v1 and v2 policy hashes printed side-by-side (visibly different)
-- `write_file` succeeds under v1, is DENIED under v2 (different Cedar rule)
-- TRACE claims from each run carry different `policy.bundle_hash` values
+- v1 and v2 bundle hashes printed side-by-side (visibly different)
+- `cmcp verify` with v1 hash → passes
+- `cmcp verify` with v2 hash → `POLICY_HASH_MISMATCH`
 
 ---
 
 ## Demo 3 — Offline TRACE verification (~60 seconds)
 
-A signed Trust Record is verified using only the record file and the issuer's public key. No server, no cMCP runtime, no network connection required.
+A signed TRACE claim is verified using only the claim file and the hashes embedded in it. No running gateway, no server connection, no operator trust required.
+
+Requires demo-01 to have run first (uses `workspace/trace-claim.json`).
 
 ```bash
-# First run demo-01 and copy its output here:
-cp demo-01-cmcp-in-action/trace_record.json demo-03-offline-trace/trust_record.json
-cp demo-01-cmcp-in-action/issuer_pub.pem    demo-03-offline-trace/issuer_pub.pem
-
-cd demo-03-offline-trace
-bash run.sh
+bash demo-03-offline-trace/run.sh
 ```
 
 What you see:
-- All TRACE fields printed (subject, model, runtime, policy, transparency)
-- `Signature: VALID` with no server call
-- Tool transcript hash and call count from the record
+- TRACE claim fields displayed (eat_profile, runtime, policy, audit_chain)
+- Verification status with `cmcp_verify` — no network call made
+- Explanation of why hardware_attestation is unverified in dev mode
 
 ---
 
@@ -73,24 +70,27 @@ What you see:
 
 ```
 demos/
-├── server/                     # Local MCP filesystem server (runs on :9001)
-│   ├── server.py               # FastMCP server: write_file, read_file, list_dir
+├── server/                        # Local MCP filesystem server (runs on :9001)
+│   ├── server.py                  # Starlette HTTP: file.write, file.read, file.list
 │   └── requirements.txt
 ├── demo-01-cmcp-in-action/
 │   ├── cmcp-config.yaml
-│   ├── catalog.json            # Approves write_file and read_file
-│   ├── policies/               # Cedar: permit write_file and read_file
-│   ├── call.py                 # MCP client that calls through cMCP
+│   ├── catalog.json               # Approves file.write, file.read, file.list
+│   ├── policies/                  # Cedar: permit file.write + file.read, forbid file.list
+│   ├── call.py                    # MCP client calling through cMCP
 │   └── run.sh
 ├── demo-02-policy-swap/
-│   ├── policies-v1/            # Cedar: permit all
-│   ├── policies-v2/            # Cedar: permit read_file only, forbid write_file
-│   ├── check_hash.py           # Prints bundle hashes for both policy sets
+│   ├── cmcp-config.yaml           # Points to policies-v1/
+│   ├── cmcp-config-v2.yaml        # Points to policies-v2/
+│   ├── catalog.json
+│   ├── policies-v1/               # Cedar: permit all
+│   ├── policies-v2/               # Cedar: deny file.write
+│   ├── check_hash.py              # Computes bundle hash matching cMCP's algorithm
 │   └── run.sh
 ├── demo-03-offline-trace/
-│   ├── verify.py               # agentrust-trace verify_record (no network)
+│   ├── verify.py                  # cmcp_verify offline claim verification
 │   └── run.sh
-└── workspace/                  # Files written by demos live here
+└── workspace/                     # Files written by demos live here
 ```
 
 ---
@@ -101,11 +101,11 @@ demos/
 LLM / client
      |
      v
-[cMCP runtime]  ←  Cedar policy bundle (hash → RTMR[2] on TDX)
+[cMCP runtime]  ←  Cedar policy bundle (hash committed in RTMR[2] on TDX)
      |
      v
 [Local MCP server]  →  workspace/ (real file writes)
      |
      v
-TRACE claim (signed)  →  offline verification with public key only
+TRACE claim (signed Ed25519)  →  offline verification with cmcp_verify
 ```
