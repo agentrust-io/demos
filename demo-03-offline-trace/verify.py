@@ -1,86 +1,90 @@
 """
-Demo 3: Offline TRACE verification
+Demo 3: Offline TRACE claim verification
 
-Verifies a signed Trust Record using ONLY:
-  - the record file (trust_record.json)
-  - the issuer's public key (issuer_pub.pem)
+Verifies the signed cMCP RuntimeClaim from demo-01 using ONLY:
+  - workspace/trace-claim.json (the claim)
+  - policy_bundle_hash and tool_catalog_hash from the claim itself
 
-No server connection. No cMCP runtime. No registry lookup.
+No running gateway. No server connection. No network call.
 
-The signed record is produced by demo-01 or demo-02 — copy it here:
-  cp ../demo-01-cmcp-in-action/trace_record.json ./trust_record.json
-  cp ../demo-01-cmcp-in-action/issuer_pub.pem ./issuer_pub.pem
+The claim's own embedded hashes are used as the "approved" values because
+demo-01 produced them under controlled conditions. In production, a verifier
+pins these hashes independently of the claim producer.
 
 Usage:
-  pip install agentrust-trace
-  python verify.py [record.json] [public_key.pem]
+  python verify.py   (from repo root, or via run.sh)
 """
-
 import json
 import pathlib
 import sys
 
-from agentrust_trace.sign import verify_record, load_key
+CLAIM_PATH = pathlib.Path(__file__).parent.parent / "workspace" / "trace-claim.json"
 
 
 def main():
-    record_path = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "trust_record.json")
-    key_path = pathlib.Path(sys.argv[2] if len(sys.argv) > 2 else "issuer_pub.pem")
-
-    if not record_path.exists():
-        print(f"Record not found: {record_path}")
-        print("Run demo-01 first and copy the output:")
-        print(f"  cp ../demo-01-cmcp-in-action/trace_record.json {record_path}")
+    if not CLAIM_PATH.exists():
+        print(f"Claim not found: {CLAIM_PATH}")
+        print("Run demo-01 first:  bash demo-01-cmcp-in-action/run.sh")
         sys.exit(1)
 
-    if not key_path.exists():
-        print(f"Public key not found: {key_path}")
-        print("Copy the issuer public key from demo-01:")
-        print(f"  cp ../demo-01-cmcp-in-action/issuer_pub.pem {key_path}")
-        sys.exit(1)
+    claim = json.loads(CLAIM_PATH.read_text())
 
-    print("=== Demo 3: Offline TRACE Verification ===\n")
-    print(f"Record:     {record_path}")
-    print(f"Public key: {key_path}")
+    trace = claim.get("trace", {})
+    gw = claim.get("gateway", {})
+    policy_hash = trace.get("policy", {}).get("bundle_hash", "")
+    catalog_hash = gw.get("catalog", {}).get("hash", "")
+
+    print("=== Demo 3: Offline TRACE verification ===")
+    print()
+    print(f"Claim:         {CLAIM_PATH}")
+    print(f"Policy hash:   {policy_hash}")
+    print(f"Catalog hash:  {catalog_hash}")
+    print()
+    print("No network call. No gateway. Verifying Ed25519 signature and hashes...")
     print()
 
-    with open(key_path, "rb") as f:
-        public_key = load_key(f.read())
+    from cmcp_verify import ApprovedHashes, verify_trace_claim
 
-    with open(record_path) as f:
-        record = json.load(f)
+    approved = ApprovedHashes(
+        policy_bundle_hash=policy_hash,
+        tool_catalog_hash=catalog_hash,
+    )
+    result = verify_trace_claim(claim, approved)
 
-    print("Fields in record:")
-    print(f"  subject:            {record.get('subject')}")
-    print(f"  issued_at (iat):    {record.get('iat')}")
-    print(f"  model.provider:     {record.get('model', {}).get('provider')}")
-    print(f"  model.model_id:     {record.get('model', {}).get('model_id')}")
-    print(f"  runtime.platform:   {record.get('runtime', {}).get('platform')}")
-    print(f"  runtime.measurement:{record.get('runtime', {}).get('measurement')}")
-    print(f"  policy.bundle_hash: {record.get('policy', {}).get('bundle_hash')}")
-    print(f"  data_class:         {record.get('data_class')}")
-    print(f"  transparency:       {record.get('transparency')}")
+    sep = "=" * 60
+    print(sep)
+    print("VERIFICATION RESULT")
+    print(sep)
+    print(f"  Status:           {result.status.value}")
+    print(f"  Verified fields:  {', '.join(result.verified_fields)}")
+    print(f"  Unverified:       {', '.join(result.unverified_fields)}")
+    print(f"  Failure reason:   {result.failure_reason}")
+    print(f"  Attestation age:  {result.attestation_age_seconds}s")
+    print(f"  Fresh:            {result.is_attestation_fresh}")
+    if result.details:
+        print("  Details:")
+        for k, v in result.details.items():
+            print(f"    {k}: {v}")
+    print(sep)
     print()
 
-    try:
-        verify_record(record, public_key_or_jwk=public_key)
-        print("Signature: VALID")
+    if result.status.value == "verified":
+        print("All cryptographic checks passed.")
         print()
-        print("This record was signed by the holder of the provided public key.")
-        print("Verification required no server, no cMCP, no network.")
-    except Exception as e:
-        print(f"Signature: INVALID — {e}")
+        print("'hardware_attestation' is in unverified_fields because CMCP_DEV_MODE=1")
+        print("uses a software-only TEE. On real Intel TDX or AMD SEV-SNP, it would")
+        print("also be verified and status would remain 'verified' with full hardware")
+        print("provenance.")
+    elif result.status.value == "partially_verified":
+        print(f"Partial verification. Failure: {result.failure_reason}")
+        sys.exit(1)
+    else:
+        print(f"Verification FAILED. Reason: {result.failure_reason}")
         sys.exit(1)
 
-    tt = record.get("tool_transcript")
-    if tt:
-        print(f"\nTool transcript:")
-        print(f"  hash:        {tt.get('hash')}")
-        print(f"  call_count:  {tt.get('call_count')}")
-        print(f"  transcript:  {tt.get('transcript_uri')}")
-        print()
-        print("To verify the transcript, fetch the URI and check the hash:")
-        print("  see demo-03 README for the full audit chain walkthrough")
+    print()
+    print("No network call was made. No gateway was contacted.")
+    print("Policy hash and measurement are committed in the Ed25519 signature.")
 
 
 if __name__ == "__main__":

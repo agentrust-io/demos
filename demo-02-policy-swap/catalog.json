@@ -3,8 +3,8 @@
     "tool_name": "write_file",
     "server": {
       "display_name": "Demo Filesystem MCP Server",
-      "url": "http://localhost:9001/sse",
-      "tls_fingerprint": "SKIP",
+      "url": "http://localhost:9001/mcp",
+      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       "transport": "http-sse",
       "rotation_mode": "key-pinned"
     },
@@ -12,31 +12,40 @@
       "description": "Write content to a file in the demo workspace",
       "input_schema": {
         "type": "object",
-        "required": ["path", "content"],
+        "required": [
+          "path",
+          "content"
+        ],
         "properties": {
-          "path": {"type": "string"},
-          "content": {"type": "string"}
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "properties": {
-          "result": {"type": "string"}
+          "result": {
+            "type": "string"
+          }
         }
       }
     },
     "compliance_domain": "public",
     "requires_baa": false,
     "sensitivity_level": "public",
-    "added_at": "2026-06-23T00:00:00Z",
-    "approved_by": "operator@agentrust.io"
+    "added_at": "2026-06-22T00:00:00Z",
+    "approved_by": "demo-setup"
   },
   {
     "tool_name": "read_file",
     "server": {
       "display_name": "Demo Filesystem MCP Server",
-      "url": "http://localhost:9001/sse",
-      "tls_fingerprint": "SKIP",
+      "url": "http://localhost:9001/mcp",
+      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       "transport": "http-sse",
       "rotation_mode": "key-pinned"
     },
@@ -44,22 +53,28 @@
       "description": "Read a file from the demo workspace",
       "input_schema": {
         "type": "object",
-        "required": ["path"],
+        "required": [
+          "path"
+        ],
         "properties": {
-          "path": {"type": "string"}
+          "path": {
+            "type": "string"
+          }
         }
       },
       "output_schema": {
         "type": "object",
         "properties": {
-          "content": {"type": "string"}
+          "content": {
+            "type": "string"
+          }
         }
       }
     },
     "compliance_domain": "public",
     "requires_baa": false,
     "sensitivity_level": "public",
-    "added_at": "2026-06-23T00:00:00Z",
-    "approved_by": "operator@agentrust.io"
+    "added_at": "2026-06-22T00:00:00Z",
+    "approved_by": "demo-setup"
   }
 ]
