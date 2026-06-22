@@ -1,28 +1,24 @@
 #!/usr/bin/env bash
 # Demo 3: Offline TRACE verification
 #
-# Verifies a signed Trust Record with no server connection.
-# Only the record and the issuer's public key are needed.
+# Verifies the signed TRACE claim from demo-01 with no server connection.
+# Only the claim file and the hashes embedded in it are used.
 #
-# Prerequisites:
-#   1. Run demo-01 first to produce a signed record.
-#   2. Copy the record and public key here:
-#        cp ../demo-01-cmcp-in-action/trace_record.json ./trust_record.json
-#        cp ../demo-01-cmcp-in-action/issuer_pub.pem    ./issuer_pub.pem
+# Run demo-01 first:  bash demo-01-cmcp-in-action/run.sh
 #
-# Usage: bash run.sh
+# Usage: bash demo-03-offline-trace/run.sh   (from repo root)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-if [[ ! -f "$SCRIPT_DIR/trust_record.json" ]]; then
-  echo "No trust_record.json found. Run demo-01 first:"
-  echo "  bash ../demo-01-cmcp-in-action/run.sh"
-  echo "Then copy the output:"
-  echo "  cp ../demo-01-cmcp-in-action/trace_record.json trust_record.json"
-  echo "  cp ../demo-01-cmcp-in-action/issuer_pub.pem    issuer_pub.pem"
+if [[ ! -f "$REPO_ROOT/workspace/trace-claim.json" ]]; then
+  echo "No claim found. Run demo-01 first:"
+  echo "  bash demo-01-cmcp-in-action/run.sh"
   exit 1
 fi
 
-echo "=== Verifying offline (no server, no cMCP, no registry) ==="
-python "$SCRIPT_DIR/verify.py" "$SCRIPT_DIR/trust_record.json" "$SCRIPT_DIR/issuer_pub.pem"
+echo ""
+echo "=== Demo 3: Offline TRACE verification ==="
+echo ""
+python "$SCRIPT_DIR/verify.py"
