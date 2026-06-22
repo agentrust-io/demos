@@ -24,7 +24,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Bash can handle POSIX paths for file existence; Python needs Windows paths
 CLAIM_PATH="$REPO_ROOT/workspace/trace-claim.json"
+V2_CLAIM_PATH="$REPO_ROOT/workspace/trace-claim-v2.json"
+# Convert to Windows paths for Python pathlib (cygpath available in Git Bash)
+CLAIM_PATH_W=$(cygpath -w "$CLAIM_PATH")
+V2_CLAIM_PATH_W=$(cygpath -w "$V2_CLAIM_PATH")
+
 if [[ ! -f "$CLAIM_PATH" ]]; then
   echo "Run demo-01 first to produce a TRACE claim:"
   echo "  bash demo-01-cmcp-in-action/run.sh"
@@ -44,7 +50,7 @@ echo ""
 echo "-- Step 1: TRACE claim from demo-01 --"
 python3 -c "
 import json, pathlib
-claim = json.loads(pathlib.Path('$CLAIM_PATH').read_text())
+claim = json.loads(pathlib.Path(r'$CLAIM_PATH_W').read_text())
 policy_hash = claim['trace']['policy']['bundle_hash']
 catalog_hash = claim['gateway']['catalog']['hash']
 print(f'  v1 policy.bundle_hash: {policy_hash}')
@@ -95,14 +101,14 @@ except urllib.error.HTTPError as exc:
 error = body.get('error', {})
 code = error.get('data', {}).get('error_code', '?')
 print(f'  HTTP 403 -- {error.get(\"message\", \"?\")} [{code}]')
-print('  Cedar forbid rule matched: resource.tool_name == \"write_file\"')
+print('  Cedar forbid rule matched: Action::\"WriteFile\" denied by v2 policy')
 "
 
 # Step 4: Get v2 TRACE claim (via allowed read_file call)
 echo ""
 echo "-- Step 4: Get v2 TRACE claim --"
 python3 -c "
-import json, os, urllib.request, pathlib
+import json, os, pathlib, urllib.request
 
 TOKEN = os.environ.get('CMCP_BEARER_TOKEN', 'demo-token')
 headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {TOKEN}'}
@@ -123,7 +129,7 @@ req2 = urllib.request.Request(
 with urllib.request.urlopen(req2, timeout=10) as resp2:
     v2_claim = json.loads(resp2.read())
 
-v1_claim = json.loads(pathlib.Path('$CLAIM_PATH').read_text())
+v1_claim = json.loads(pathlib.Path(r'$CLAIM_PATH_W').read_text())
 v1_hash = v1_claim['trace']['policy']['bundle_hash']
 v2_hash = v2_claim['trace']['policy']['bundle_hash']
 print(f'  v1 policy.bundle_hash: {v1_hash}')
@@ -134,31 +140,28 @@ if v1_hash != v2_hash:
 else:
     print('  ERROR: hashes should differ but are identical.')
 
-pathlib.Path('$REPO_ROOT/workspace/trace-claim-v2.json').write_text(
-    __import__('json').dumps(v2_claim, indent=2)
-)
+pathlib.Path(r'$V2_CLAIM_PATH_W').write_text(json.dumps(v2_claim, indent=2))
+print(f'  v2 claim saved.')
 " 2>&1
 
-# Steps 5-6: Verify the v2 claim against v1 and v2 hashes
-# v2 claim was written to workspace/trace-claim-v2.json in step 4
-V2_CLAIM_PATH="$REPO_ROOT/workspace/trace-claim-v2.json"
+# Steps 5-6: Verify the v2 claim against pinned hashes
 V1_HASH=$(python3 "$SCRIPT_DIR/check_hash.py" v1 | awk '{print $2}')
 V2_HASH=$(python3 "$SCRIPT_DIR/check_hash.py" v2 | awk '{print $2}')
 CATALOG_HASH=$(python3 -c "
 import json, pathlib
-c = json.loads(pathlib.Path('$V2_CLAIM_PATH').read_text())
+c = json.loads(pathlib.Path(r'$V2_CLAIM_PATH_W').read_text())
 print(c['gateway']['catalog']['hash'])
 ")
 
 echo ""
 echo "-- Step 5: Verify v2 claim with v1 (pinned) hash -> POLICY_HASH_MISMATCH --"
 echo "   A verifier that approved v1 now rejects any claim from the v2 gateway."
-cmcp verify "$V2_CLAIM_PATH" --policy-hash "$V1_HASH" --catalog-hash "$CATALOG_HASH" || true
+cmcp verify "$V2_CLAIM_PATH_W" --policy-hash "$V1_HASH" --catalog-hash "$CATALOG_HASH" || true
 
 echo ""
 echo "-- Step 6: Verify v2 claim with v2 hash -> passes --"
 echo "   (Confirms the v2 claim itself is well-formed; only the pinned hash differs.)"
-cmcp verify "$V2_CLAIM_PATH" --policy-hash "$V2_HASH" --catalog-hash "$CATALOG_HASH" || true
+cmcp verify "$V2_CLAIM_PATH_W" --policy-hash "$V2_HASH" --catalog-hash "$CATALOG_HASH" || true
 
 echo ""
 echo "  On real TDX hardware: RTMR[2] changes on policy swap."

@@ -5,8 +5,8 @@ Matches the exact algorithm in cmcp_runtime.policy.bundle._canonical_bundle_hash
 
   sha256(json({
     "manifest": <raw manifest dict>,
-    "policy_files": {<rel_path>: sha256(<file bytes>), ...},  # sorted
-    "schema_hash": sha256(<schema bytes>)
+    "policy_files": {<rel_path>: sha256(file_text.encode()), ...},  # sorted
+    "schema_hash": sha256(schema_text.encode())
   }, sort_keys=True, separators=(",",":")))
 
 Usage:
@@ -30,17 +30,17 @@ def bundle_hash(policies_dir: pathlib.Path) -> str:
     # Glob all .cedar files, sorted, relative paths as POSIX strings
     cedar_files = sorted(policies_dir.glob("**/*.cedar"))
     policy_files = {
-        cf.relative_to(policies_dir).as_posix(): sha256_hex(cf.read_bytes())
+        cf.relative_to(policies_dir).as_posix(): sha256_hex(cf.read_text().encode())
         for cf in cedar_files
     }
 
-    schema_content = (policies_dir / "schema.cedarschema").read_bytes()
+    schema_content = (policies_dir / "schema.cedarschema").read_text()
 
     canonical = json.dumps(
         {
             "manifest": raw_manifest,
             "policy_files": dict(sorted(policy_files.items())),
-            "schema_hash": sha256_hex(schema_content),
+            "schema_hash": sha256_hex(schema_content.encode()),
         },
         sort_keys=True,
         separators=(",", ":"),

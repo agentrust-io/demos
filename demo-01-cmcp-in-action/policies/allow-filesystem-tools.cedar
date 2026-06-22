@@ -1,16 +1,21 @@
+// cMCP Cedar policy for demo-01
+//
+// AGT's CedarBackend maps tool_name to a Cedar action (PascalCase):
+//   write_file -> Action::"WriteFile"
+//   read_file  -> Action::"ReadFile"
+//   list_dir   -> Action::"ListDir"
+//
+// write_file and read_file: ALLOWED
+// list_dir: DENIED (demonstrates Cedar enforcement)
+
 permit (
   principal,
-  action == cMCP::Action::"call_tool",
+  action in [Action::"WriteFile", Action::"ReadFile"],
   resource
-) when {
-  resource.tool_name == "write_file" ||
-  resource.tool_name == "read_file"
-};
+);
 
 forbid (
   principal,
-  action == cMCP::Action::"call_tool",
+  action == Action::"ListDir",
   resource
-) when {
-  resource.tool_name == "list_dir"
-};
+);
