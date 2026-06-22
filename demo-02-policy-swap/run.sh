@@ -139,21 +139,26 @@ pathlib.Path('$REPO_ROOT/workspace/trace-claim-v2.json').write_text(
 )
 " 2>&1
 
-# Step 5: Run cmcp verify -- v1 claim with v2 hash -> POLICY_HASH_MISMATCH
-echo ""
-echo "-- Step 5: cmcp verify (v1 claim + v2 hash) -> POLICY_HASH_MISMATCH --"
+# Steps 5-6: Verify the v2 claim against v1 and v2 hashes
+# v2 claim was written to workspace/trace-claim-v2.json in step 4
+V2_CLAIM_PATH="$REPO_ROOT/workspace/trace-claim-v2.json"
 V1_HASH=$(python3 "$SCRIPT_DIR/check_hash.py" v1 | awk '{print $2}')
 V2_HASH=$(python3 "$SCRIPT_DIR/check_hash.py" v2 | awk '{print $2}')
 CATALOG_HASH=$(python3 -c "
 import json, pathlib
-c = json.loads(pathlib.Path('$CLAIM_PATH').read_text())
+c = json.loads(pathlib.Path('$V2_CLAIM_PATH').read_text())
 print(c['gateway']['catalog']['hash'])
 ")
-cmcp verify "$CLAIM_PATH" --policy-hash "$V2_HASH" --catalog-hash "$CATALOG_HASH" || true
 
 echo ""
-echo "-- Step 6: cmcp verify (v1 claim + v1 hash) -> passes --"
-cmcp verify "$CLAIM_PATH" --policy-hash "$V1_HASH" --catalog-hash "$CATALOG_HASH" || true
+echo "-- Step 5: Verify v2 claim with v1 (pinned) hash -> POLICY_HASH_MISMATCH --"
+echo "   A verifier that approved v1 now rejects any claim from the v2 gateway."
+cmcp verify "$V2_CLAIM_PATH" --policy-hash "$V1_HASH" --catalog-hash "$CATALOG_HASH" || true
+
+echo ""
+echo "-- Step 6: Verify v2 claim with v2 hash -> passes --"
+echo "   (Confirms the v2 claim itself is well-formed; only the pinned hash differs.)"
+cmcp verify "$V2_CLAIM_PATH" --policy-hash "$V2_HASH" --catalog-hash "$CATALOG_HASH" || true
 
 echo ""
 echo "  On real TDX hardware: RTMR[2] changes on policy swap."
