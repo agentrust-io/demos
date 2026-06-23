@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Demo 1: cMCP in action
 #
-# Starts the local MCP filesystem server and the cMCP gateway (CMCP_DEV_MODE=1),
-# then calls three tools through the gateway:
+# Starts the local MCP filesystem server and the cMCP Runtime (CMCP_DEV_MODE=1),
+# then calls three tools through the Runtime:
 #   file.write  -> Cedar allows it, real file written to workspace/hello.txt
 #   file.read   -> Cedar allows it, reads file back
 #   file.list   -> Cedar DENIES it (HTTP 403)
@@ -34,7 +34,7 @@ python "$REPO_ROOT/server/server.py" &
 SERVER_PID=$!
 sleep 1
 
-echo "-- Starting cMCP gateway (CMCP_DEV_MODE=1) on :8443 --"
+echo "-- Starting cMCP Runtime (CMCP_DEV_MODE=1) on :8443 --"
 cd "$SCRIPT_DIR"
 CMCP_DEV_MODE=1 cmcp start --config cmcp-config.yaml &
 CMCP_PID=$!

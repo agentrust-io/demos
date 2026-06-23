@@ -123,7 +123,7 @@ def main():
     print(f"  signature:           {sig[:40]}...")
     print()
     print("  policy.bundle_hash is committed in the Ed25519 signature.")
-    print("  On real TDX: it also flows into RTMR[2] at gateway startup.")
+    print("  On real TDX: it also flows into RTMR[2] at cMCP Runtime startup.")
 
     claim_path = WORKSPACE / "trace-claim.json"
     claim_path.write_text(json.dumps(claim, indent=2))

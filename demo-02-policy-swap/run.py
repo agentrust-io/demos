@@ -87,7 +87,7 @@ def main() -> None:
 
     server = cmcp_proc = None
     try:
-        # Step 2: start v2 gateway
+        # Step 2: start v2 runtime
         print()
         print("-- Step 2: Start cMCP with v2 policy (write_file DENIED) --")
         server = subprocess.Popen(
@@ -173,7 +173,7 @@ def main() -> None:
 
     print()
     print("-- Step 5: Verify v2 claim with v1 (pinned) hash -> POLICY_HASH_MISMATCH --")
-    print("   A verifier that approved v1 now rejects any claim from the v2 gateway.")
+    print("   A verifier that approved v1 now rejects any claim from the v2 Runtime.")
     sys.stdout.flush()
     subprocess.run(
         [cmcp, "verify", str(V2_CLAIM_PATH), "--policy-hash", v1_hash_out, "--catalog-hash", cat_hash],
@@ -189,7 +189,7 @@ def main() -> None:
 
     print()
     print("  On real TDX hardware: RTMR[2] changes on policy swap.")
-    print("  No claim from the v2 gateway can pass v1 verification.")
+    print("  No claim from the v2 Runtime can pass v1 verification.")
     print()
 
 

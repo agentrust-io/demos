@@ -51,7 +51,7 @@ def main() -> None:
         )
         time.sleep(1)
 
-        print("-- Starting cMCP gateway (CMCP_DEV_MODE=1) on :8443 --", flush=True)
+        print("-- Starting cMCP Runtime (CMCP_DEV_MODE=1) on :8443 --", flush=True)
         env = os.environ.copy()
         env["CMCP_DEV_MODE"] = "1"
         cmcp_proc = subprocess.Popen(

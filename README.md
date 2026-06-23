@@ -12,7 +12,7 @@ pip install cmcp-runtime
 
 `cmcp-runtime` includes all dependencies (`starlette`, `uvicorn`, `cmcp-verify`). All demos use `CMCP_DEV_MODE=1` (software-only TEE, no hardware required). The local MCP server performs real filesystem operations on `./workspace/`.
 
-Set a bearer token (the gateway requires one):
+Set a bearer token (the cMCP Runtime requires one):
 
 ```bash
 # bash
@@ -24,7 +24,7 @@ export CMCP_BEARER_TOKEN=demo-token
 $env:CMCP_BEARER_TOKEN = "demo-token"
 ```
 
-Each demo has a `run.py` (works on any OS) and a `run.sh` (bash only). Server and gateway logs are written to `*.log` files in the demo directory, not the terminal.
+Each demo has a `run.py` (works on any OS) and a `run.sh` (bash only). Server and cMCP Runtime logs are written to `*.log` files in the demo directory, not the terminal.
 
 ---
 
