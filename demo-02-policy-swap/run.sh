@@ -59,7 +59,7 @@ print()
 print('  A verifier who approved v1 pins the policy hash above.')
 "
 
-# Step 2: Start v2 gateway (Cedar policy now forbids write_file)
+# Step 2: Start v2 Runtime (Cedar policy now forbids write_file)
 echo ""
 echo "-- Step 2: Start cMCP with v2 policy (write_file DENIED) --"
 python "$REPO_ROOT/server/server.py" &
@@ -155,7 +155,7 @@ print(c['gateway']['catalog']['hash'])
 
 echo ""
 echo "-- Step 5: Verify v2 claim with v1 (pinned) hash -> POLICY_HASH_MISMATCH --"
-echo "   A verifier that approved v1 now rejects any claim from the v2 gateway."
+echo "   A verifier that approved v1 now rejects any claim from the v2 Runtime."
 cmcp verify "$V2_CLAIM_PATH_W" --policy-hash "$V1_HASH" --catalog-hash "$CATALOG_HASH" || true
 
 echo ""
@@ -165,5 +165,5 @@ cmcp verify "$V2_CLAIM_PATH_W" --policy-hash "$V2_HASH" --catalog-hash "$CATALOG
 
 echo ""
 echo "  On real TDX hardware: RTMR[2] changes on policy swap."
-echo "  No claim from the v2 gateway can pass v1 verification."
+echo "  No claim from the v2 Runtime can pass v1 verification."
 echo ""

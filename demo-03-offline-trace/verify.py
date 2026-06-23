@@ -5,7 +5,7 @@ Verifies the signed cMCP RuntimeClaim from demo-01 using ONLY:
   - workspace/trace-claim.json (the claim)
   - policy_bundle_hash and tool_catalog_hash from the claim itself
 
-No running gateway. No server connection. No network call.
+No running cMCP Runtime. No server connection. No network call.
 
 The claim's own embedded hashes are used as the "approved" values because
 demo-01 produced them under controlled conditions. In production, a verifier
@@ -83,7 +83,7 @@ def main():
         sys.exit(1)
 
     print()
-    print("No network call was made. No gateway was contacted.")
+    print("No network call was made. No cMCP Runtime was contacted.")
     print("Policy hash and measurement are committed in the Ed25519 signature.")
 
 
