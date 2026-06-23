@@ -27,11 +27,17 @@ def _find_cmcp() -> str:
     found = shutil.which("cmcp")
     if found:
         return found
-    scripts = pathlib.Path(sys.executable).parent
-    for name in ("cmcp.exe", "cmcp"):
-        p = scripts / name
-        if p.exists():
-            return str(p)
+    import sysconfig
+    candidates = [
+        pathlib.Path(sys.executable).parent,
+        pathlib.Path(sysconfig.get_path("scripts")),
+        pathlib.Path(sysconfig.get_path("scripts", "nt_user")),
+    ]
+    for scripts in candidates:
+        for name in ("cmcp.exe", "cmcp"):
+            p = scripts / name
+            if p.exists():
+                return str(p)
     sys.exit("cmcp not found. Run: pip install cmcp-runtime")
 
 
