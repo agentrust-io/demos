@@ -15,7 +15,13 @@ pip install cmcp-runtime
 Set a bearer token (the gateway requires one):
 
 ```bash
+# bash / Git Bash
 export CMCP_BEARER_TOKEN=demo-token
+```
+
+```powershell
+# PowerShell
+$env:CMCP_BEARER_TOKEN = "demo-token"
 ```
 
 ---
