@@ -6,7 +6,7 @@ Runnable demos for [cMCP](https://github.com/agentrust-io/cmcp) and [TRACE](http
 
 ## Prerequisites
 
-```bash
+```
 pip install cmcp-runtime
 ```
 
@@ -15,7 +15,7 @@ pip install cmcp-runtime
 Set a bearer token (the gateway requires one):
 
 ```bash
-# bash / Git Bash
+# bash
 export CMCP_BEARER_TOKEN=demo-token
 ```
 
@@ -23,6 +23,8 @@ export CMCP_BEARER_TOKEN=demo-token
 # PowerShell
 $env:CMCP_BEARER_TOKEN = "demo-token"
 ```
+
+Each demo has a `run.py` (works on any OS) and a `run.sh` (bash only). Server and gateway logs are written to `*.log` files in the demo directory, not the terminal.
 
 ---
 
@@ -32,8 +34,8 @@ The agent calls three tools through the cMCP gateway. Cedar policy is enforced f
 
 On real Intel TDX hardware, the policy bundle hash flows into RTMR[2] at startup. Here it appears in `trace.policy.bundle_hash` in the claim.
 
-```bash
-bash demo-01-cmcp-in-action/run.sh
+```
+python demo-01-cmcp-in-action/run.py
 ```
 
 What you see:
@@ -54,8 +56,8 @@ On real TDX hardware, the policy hash flows into RTMR[2] at startup -- the TEE m
 
 **Requires demo 1 to have run first** (reads `workspace/trace-claim.json`).
 
-```bash
-bash demo-02-policy-swap/run.sh
+```
+python demo-02-policy-swap/run.py
 ```
 
 What you see:
@@ -72,8 +74,8 @@ The signed TRACE claim from demo-01 is verified with no gateway, no server, and 
 
 **Requires demo 1 to have run first**.
 
-```bash
-bash demo-03-offline-trace/run.sh
+```
+python demo-03-offline-trace/run.py
 ```
 
 What you see:
@@ -99,7 +101,8 @@ demos/
 |   +-- catalog.json            # Approves write_file, read_file, list_dir
 |   +-- policies/               # Cedar: permit write_file+read_file, forbid list_dir
 |   +-- call.py                 # Demo agent: calls tools, closes session, saves claim
-|   +-- run.sh
+|   +-- run.py                  # Cross-platform launcher (use this)
+|   +-- run.sh                  # bash-only launcher
 +-- demo-02-policy-swap/
 |   +-- catalog.json
 |   +-- cmcp-config.yaml        # Points to policies-v1/
@@ -107,10 +110,12 @@ demos/
 |   +-- policies-v1/            # Cedar: permit all
 |   +-- policies-v2/            # Cedar: deny write_file (hash differs from v1)
 |   +-- check_hash.py           # Computes and compares bundle hashes
-|   +-- run.sh
+|   +-- run.py                  # Cross-platform launcher (use this)
+|   +-- run.sh                  # bash-only launcher
 +-- demo-03-offline-trace/
     +-- verify.py               # cmcp_verify.verify_trace_claim (no network)
-    +-- run.sh
+    +-- run.py                  # Cross-platform launcher (use this)
+    +-- run.sh                  # bash-only launcher
 ```
 
 ---

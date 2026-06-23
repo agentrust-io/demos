@@ -6,3 +6,8 @@ __pycache__/
 .venv/
 *.egg-info/
 dist/
+*.log
+audit.db-shm
+audit.db-wal
+audit-v2.db-shm
+audit-v2.db-wal
