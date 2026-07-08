@@ -68,6 +68,11 @@ def main():
     print(sep)
     print()
 
+    dev_mode_only = (
+        set(result.unverified_fields) == {"hardware_attestation"}
+        and not result.failure_reason
+    )
+
     if result.status.value == "verified":
         print("All cryptographic checks passed.")
         print()
@@ -75,6 +80,14 @@ def main():
         print("uses a software-only TEE. On real Intel TDX or AMD SEV-SNP, it would")
         print("also be verified and status would remain 'verified' with full hardware")
         print("provenance.")
+    elif result.status.value == "partially_verified" and dev_mode_only:
+        # Expected outcome under CMCP_DEV_MODE=1: every cryptographic check passes
+        # and only hardware_attestation is unverified because there is no real TEE.
+        print("All cryptographic checks passed.")
+        print()
+        print("Status is 'partially_verified' because CMCP_DEV_MODE=1 uses a software-only")
+        print("TEE, so 'hardware_attestation' cannot be verified. On real Intel TDX or AMD")
+        print("SEV-SNP, that field is verified too and the status becomes 'verified'.")
     elif result.status.value == "partially_verified":
         print(f"Partial verification. Failure: {result.failure_reason}")
         sys.exit(1)

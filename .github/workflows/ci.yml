@@ -1,0 +1,38 @@
+name: Demos
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  CMCP_DEV_MODE: "1"
+  CMCP_BEARER_TOKEN: demo-token
+
+jobs:
+  demos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install cmcp-runtime
+        run: pip install cmcp-runtime
+
+      # Run in order: demo-01 produces workspace/trace-claim.json, which
+      # demo-02 and demo-03 consume.
+      - name: Demo 1 - cMCP in action
+        run: python demo-01-cmcp-in-action/run.py
+
+      - name: Demo 2 - policy swap
+        run: python demo-02-policy-swap/run.py
+
+      - name: Demo 3 - offline TRACE verification
+        run: python demo-03-offline-trace/run.py
