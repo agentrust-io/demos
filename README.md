@@ -63,8 +63,8 @@ python demo-02-policy-swap/run.py
 What you see:
 - v1 and v2 bundle hashes printed (visibly different SHA-256 values)
 - `write_file` is DENIED under v2 policy (new Cedar forbid rule)
-- `cmcp verify` on the v1 claim with v2 hash -> POLICY_HASH_MISMATCH
-- `cmcp verify` on the v1 claim with v1 hash -> passes
+- `cmcp verify` on the v2 claim with the pinned v1 hash -> `policy_bundle.hash` FAILS (POLICY_HASH_MISMATCH)
+- `cmcp verify` on the v2 claim with the v2 hash -> `policy_bundle.hash` PASSES (overall result stays `partially_verified` in software-only mode, because only `hardware_attestation` is left unchecked)
 
 ---
 
@@ -81,7 +81,7 @@ python demo-03-offline-trace/run.py
 What you see:
 - Claim fields printed: `runtime.platform`, `runtime.measurement`, `policy.bundle_hash`
 - All cryptographic checks pass (schema, signature, policy hash, catalog hash, audit chain)
-- `hardware_attestation` is in `unverified_fields` (software-only mode -- on real TDX it would also be verified)
+- `hardware_attestation` is in `unverified_fields`, so the status reads `partially_verified` (software-only mode -- on real TDX that field verifies too and the status becomes `verified`)
 - No connection made to any server
 
 ---

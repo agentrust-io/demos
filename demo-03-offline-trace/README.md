@@ -2,32 +2,27 @@
 
 **Duration:** ~60 seconds
 
-A signed Trust Record is verified using only the record and the issuer's public key. No server, no cMCP runtime, no registry connection required. This is the portability property of TRACE: verification is fully self-contained.
+The signed TRACE claim from demo-01 is verified using only the claim itself and the hashes embedded in it. No running cMCP runtime, no server, no network call. This is the portability property of TRACE: verification is fully self-contained.
 
-## Setup
-
-Run demo-01 first to produce a signed record, then copy the artifacts here:
-
-```bash
-cp ../demo-01-cmcp-in-action/trace_record.json ./trust_record.json
-cp ../demo-01-cmcp-in-action/issuer_pub.pem    ./issuer_pub.pem
-```
+**Requires demo-01 to have run first** (reads `../workspace/trace-claim.json`).
 
 ## Run
 
-```bash
-bash run.sh
+```
+python run.py
 ```
 
 ## What to show the audience
 
-1. The `verify.py` script loads the record and the public key — nothing else
-2. All TRACE fields are printed: subject, model, runtime, policy, transparency
-3. `Signature: VALID` — no network call was made
-4. Point out: `runtime.measurement` and `policy.bundle_hash` are committed in the signature
+1. `verify.py` loads only `workspace/trace-claim.json` and the hashes committed inside it
+2. All cryptographic checks pass: schema, signature, policy hash, catalog hash, attestation freshness, audit chain
+3. `hardware_attestation` lands in `unverified_fields`, so the status reads `partially_verified`
+   - This is expected under `CMCP_DEV_MODE=1` (software-only TEE, no hardware to attest)
+   - On real Intel TDX or AMD SEV-SNP, that field verifies too and the status becomes `verified`
+4. Point out: `runtime.measurement` and `policy.bundle_hash` are committed in the Ed25519 signature
    - Changing either field would break the signature
-   - The verifier needs no connection to the operator who produced the record
+   - No connection to the operator who produced the claim is needed
 
 ## Key takeaway
 
-The TRACE record is a portable proof. A regulator, auditor, or counterparty who holds the issuer's public key can verify any record independently — the operator who produced it does not need to be online or trusted.
+The TRACE claim is a portable proof. A regulator, auditor, or counterparty who holds the issuer's public key can verify any claim independently. The operator who produced it does not need to be online or trusted. Software-only mode proves the whole chain except the hardware root; hardware mode closes that last gap.
