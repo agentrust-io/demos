@@ -12,6 +12,16 @@ pip install cmcp-runtime
 
 `cmcp-runtime` includes all dependencies (`starlette`, `uvicorn`, `cmcp-verify`). All demos use `CMCP_DEV_MODE=1` (software-only TEE, no hardware required). The local MCP server performs real filesystem operations on `./workspace/`.
 
+## Quick start: one command
+
+```
+python demo.py            # run all three demos, pausing before each (good for live talks)
+python demo.py --no-pause # run straight through
+python demo.py 2          # run only demo 2
+```
+
+`demo.py` sets the token and dev mode for you and prints the detected `cmcp-runtime` version. If your active Python cannot find the `cmcp` command, it will use a local `.venv` if one exists (`python -m venv .venv` then install `cmcp-runtime` into it). To run the demos individually instead, use the per-demo commands below.
+
 Set a bearer token (the cMCP Runtime requires one):
 
 ```bash
