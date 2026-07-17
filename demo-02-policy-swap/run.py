@@ -174,14 +174,18 @@ def main() -> None:
     print()
     print("-- Step 5: Verify v2 claim with v1 (pinned) hash -> POLICY_HASH_MISMATCH --")
     print("   A verifier that approved v1 now rejects any claim from the v2 Runtime.")
+    print("   Watch the policy_bundle.hash line below: it FAILS.")
     sys.stdout.flush()
     subprocess.run(
         [cmcp, "verify", str(V2_CLAIM_PATH), "--policy-hash", v1_hash_out, "--catalog-hash", cat_hash],
     )
 
     print()
-    print("-- Step 6: Verify v2 claim with v2 hash -> passes --")
-    print("   (Confirms the v2 claim itself is well-formed; only the pinned hash differs.)")
+    print("-- Step 6: Verify v2 claim with v2 hash -> policy_bundle.hash now PASSES --")
+    print("   Same claim, correct pinned hash: the policy_bundle.hash line flips")
+    print("   FAIL -> PASS. The policy swap is fully accounted for.")
+    print("   The overall result stays partially_verified only because software-only")
+    print("   dev mode has no hardware_attestation to check. On real TDX it verifies.")
     sys.stdout.flush()
     subprocess.run(
         [cmcp, "verify", str(V2_CLAIM_PATH), "--policy-hash", v2_hash_out, "--catalog-hash", cat_hash],
