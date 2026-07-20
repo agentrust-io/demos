@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""One command, all three agentrust-io demos.
+"""One command, the agentrust-io demos.
 
-    python demo.py              # run all three, pausing before each (for live talks)
+    python demo.py              # run all, pausing before each (for live talks)
     python demo.py --no-pause   # run straight through, no prompts
-    python demo.py 2            # run only demo 2 (1, 2, or 3)
+    python demo.py 2            # run only demo 2 (1, 2, 3, or 4)
 
 The trust chain, end to end:
     Demo 1  cMCP enforces Cedar on every tool call and signs a TRACE claim.
     Demo 2  Swap the policy bundle and the claim's hash changes; a pinned verifier rejects it.
     Demo 3  Verify that signed claim offline: no server, no gateway, no network.
+
+Then, on a second axis:
+    Demo 4  The same tool is allowed in one workflow and denied in another. Enforcement
+            is on the declared call context, not on the model's stated intent.
 
 All demos run in software-only mode (CMCP_DEV_MODE=1). That is deliberate: software
 proves the whole chain except the hardware root, so verification reads
@@ -36,6 +40,10 @@ DEMOS = [
     ("3", "Offline TRACE verification",
      "demo-03-offline-trace/run.py",
      "Verify the demo-1 claim with nothing but the claim and a public key. No network."),
+    ("4", "Context-aware enforcement",
+     "demo-04-context-enforcement/run.py",
+     "The same tool is allowed in one workflow and denied in another. Enforcement is\n"
+     "  on the declared call context, not on the model's stated intent."),
 ]
 
 GREEN = "\033[92m"; BLUE = "\033[96m"; DIM = "\033[90m"; BOLD = "\033[1m"; RST = "\033[0m"
@@ -135,7 +143,7 @@ def run(idx, title, script, blurb, pause):
 
 def main():
     ap = argparse.ArgumentParser(description="Run the agentrust-io trust-chain demos.")
-    ap.add_argument("only", nargs="?", choices=["1", "2", "3"], help="run only this demo")
+    ap.add_argument("only", nargs="?", choices=["1", "2", "3", "4"], help="run only this demo")
     ap.add_argument("--no-pause", action="store_true", help="run straight through, no prompts")
     args = ap.parse_args()
 

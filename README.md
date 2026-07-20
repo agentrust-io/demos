@@ -1,6 +1,6 @@
 # agentrust-io demos
 
-Runnable demos for [cMCP](https://github.com/agentrust-io/cmcp) and [TRACE](https://github.com/agentrust-io/trace-spec). Three demos, ~4 minutes total.
+Runnable demos for [cMCP](https://github.com/agentrust-io/cmcp) and [TRACE](https://github.com/agentrust-io/trace-spec). Four demos, ~5 minutes total.
 
 ---
 
@@ -96,6 +96,22 @@ What you see:
 
 ---
 
+## Demo 4 -- Context-aware enforcement (~90 seconds)
+
+Demos 1-3 are the trust chain: enforce, tamper, verify. Demo 4 is a second axis. The same tool is allowed in one workflow and denied in another, so authorization tracks the declared call context, not the tool's identity and not the model's stated intent.
+
+```
+python demo-04-context-enforcement/run.py
+```
+
+What you see:
+- `write_file` under `workflow_id="invoice-run"`: Cedar **allows** it (the `WriteFile` permit is guarded by `context.workflow_id == "invoice-run"`)
+- the identical `write_file`, same arguments, under `workflow_id="chat-freeform"`: **denied by Cedar** (HTTP 403, POLICY_DENY) -- no permit matches, default-deny holds
+- `read_file` under `workflow_id="chat-freeform"`: **allowed** (reads are permitted in any workflow, so the second workflow is not blocked wholesale; only the write capability is scoped)
+- both the allow and the deny are committed to the signed audit chain under one `policy.bundle_hash`
+
+---
+
 ## Structure
 
 ```
@@ -123,7 +139,14 @@ demos/
 |   +-- run.py                  # Cross-platform launcher (use this)
 |   +-- run.sh                  # bash-only launcher
 +-- demo-03-offline-trace/
-    +-- verify.py               # cmcp_verify.verify_trace_claim (no network)
+|   +-- verify.py               # cmcp_verify.verify_trace_claim (no network)
+|   +-- run.py                  # Cross-platform launcher (use this)
+|   +-- run.sh                  # bash-only launcher
++-- demo-04-context-enforcement/
+    +-- cmcp-config.yaml
+    +-- catalog.json            # Approves write_file, read_file (compliance_domain: finance)
+    +-- policies/               # Cedar: WriteFile permitted only when context.workflow_id == "invoice-run"
+    +-- call.py                 # Same write in two workflows: one allowed, one denied
     +-- run.py                  # Cross-platform launcher (use this)
     +-- run.sh                  # bash-only launcher
 ```
