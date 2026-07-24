@@ -1,0 +1,3 @@
+[submodule "web-console/vendor/examples"]
+	path = web-console/vendor/examples
+	url = https://github.com/agentrust-io/examples

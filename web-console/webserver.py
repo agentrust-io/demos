@@ -1,12 +1,11 @@
-"""Local web server for the cMCP browser console.
+"""Web server for the cMCP financial-services console.
 
-Serves the static UI in web/ and exposes a small JSON API that the browser
-calls. The API forwards to the running cMCP gateway on :8443, holding the
-bearer token here so the browser never sees it and there is no CORS to deal
-with. Every response the UI shows is the gateway's real output.
+Serves the UI in web/ and a small JSON API. The API runs the real example
+agent (vendor/examples/financial-services) as a subprocess against the running
+gateway and parses its output into structured steps; it also runs cmcp verify
+on the signed record. The browser never talks to the gateway directly.
 
-Run indirectly via run.py, or standalone once the server and gateway are up:
-    python webserver.py            # serves on http://localhost:8000
+    python webserver.py             # serves on http://localhost:8000
 """
 import json
 import os
@@ -15,25 +14,47 @@ import re
 import shutil
 import subprocess
 import sys
-import urllib.error
-import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = pathlib.Path(__file__).parent.resolve()
 WEB = HERE / "web"
+EXAMPLE = HERE / "vendor" / "examples" / "financial-services"
+AGENT = EXAMPLE / "agent" / "credit_risk_agent.py"
 WORKSPACE = HERE.parent / "workspace"
-POLICY_FILE = HERE / "policies" / "support-agent.cedar"
-CATALOG_FILE = HERE / "catalog.json"
-CLAIM_FILE = WORKSPACE / "web-console-claim.json"
+CLAIM_FILE = WORKSPACE / "fs-claim.json"
 
 GATEWAY = os.environ.get("CMCP_GATEWAY_URL", "http://localhost:8443")
-TOKEN = os.environ.get("CMCP_BEARER_TOKEN", "demo-token")
 PORT = int(os.environ.get("WEB_CONSOLE_PORT", "8000"))
-SESSION_LABEL = "web-console-session"
-WORKFLOW_ID = "web-console"
 
 _CT = {".html": "text/html", ".js": "text/javascript", ".css": "text/css",
        ".svg": "image/svg+xml", ".json": "application/json"}
+
+SCENARIOS = [
+    {"id": "clean", "label": "Performing obligor",
+     "obligor": "Rheintal Präzisionstechnik GmbH", "amount": "€250,000",
+     "expect": "Write allowed", "outcome": "allow"},
+    {"id": "large-exposure", "label": "Concentration breach",
+     "obligor": "Nordwind Logistik AG", "amount": "€750,000",
+     "expect": "Write blocked", "outcome": "deny"},
+    {"id": "sanctions-hit", "label": "Sanctions / impaired",
+     "obligor": "Meridian Trading DMCC", "amount": "€200,000",
+     "expect": "Write blocked", "outcome": "deny"},
+]
+
+# Plain-English gloss for the guardrails in policy/allow.cedar, keyed by the
+# @reason annotation the runtime returns on deny.
+GUARDRAILS = [
+    {"reason": "cdd-clearance-required", "regulation": "EU AML Regulation 2024/1624",
+     "plain": "No assessment is written until customer due diligence clears."},
+    {"reason": "human-review-required", "regulation": "EBA/GL/2020/06",
+     "plain": "Facilities above the €500k delegated authority need a human decision-maker."},
+    {"reason": "concentration-limit-breached", "regulation": "CRR Art. 395",
+     "plain": "The facility must not breach the single-obligor concentration limit."},
+    {"reason": "ifrs9-stage-3-credit-impaired", "regulation": "IFRS 9",
+     "plain": "Credit-impaired (stage 3) obligors cannot be auto-approved."},
+    {"reason": "attested-runtime-required", "regulation": "DORA Art. 9",
+     "plain": "Confidential financial data only flows through an attested runtime."},
+]
 
 
 def _find_cmcp() -> str:
@@ -49,55 +70,59 @@ def _find_cmcp() -> str:
     return "cmcp"
 
 
-def _gw(method: str, path: str, payload=None):
-    """Call the gateway. Returns (body_dict, status_code)."""
-    data = json.dumps(payload).encode() if payload is not None else None
-    req = urllib.request.Request(
-        GATEWAY + path, data=data, method=method,
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {TOKEN}"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read() or b"{}"), resp.status
-    except urllib.error.HTTPError as exc:
-        try:
-            return json.loads(exc.read() or b"{}"), exc.code
-        except json.JSONDecodeError:
-            return {"error": "non-JSON error body"}, exc.code
+def _run_agent(scenario: str):
+    """Run the real example agent and parse its output into steps + claim."""
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    proc = subprocess.run(
+        [sys.executable, str(AGENT), "--scenario", scenario, "--gateway", GATEWAY],
+        capture_output=True, text=True, encoding="utf-8", env=env, timeout=60)
+    out = (proc.stdout or "") + "\n" + (proc.stderr or "")
 
+    claim = None
+    marker = out.find("TRACE Trust Record")
+    body = out
+    if marker != -1:
+        rest = out[marker:]
+        brace = rest.find("{")
+        if brace != -1:
+            try:
+                claim, _ = json.JSONDecoder().raw_decode(rest[brace:])
+            except json.JSONDecodeError:
+                claim = None
+        body = out[:marker]
 
-def _tool_call(tool: str, arguments: dict):
-    return _gw("POST", "/mcp", {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": tool,
-            "arguments": arguments,
-            "_cmcp": {"session_id": SESSION_LABEL, "workflow_id": WORKFLOW_ID},
-        },
-    })
+    steps, cur = [], None
+    for line in body.splitlines():
+        m = re.match(r"\s*\[(\d)/6\]\s+(\S+)", line)
+        if m:
+            cur = {"n": m.group(1), "tool": m.group(2), "decision": None, "note": "", "advice": {}}
+            steps.append(cur)
+            continue
+        if cur is None:
+            continue
+        m = re.search(r"->\s*decision:\s*(allow|deny)(?:\s*\(([^)]+)\))?(.*)", line)
+        if m:
+            cur["decision"] = m.group(1)
+            if m.group(2):
+                cur["deny_code"] = m.group(2)
+            note = (m.group(3) or "").strip()
+            if note:
+                cur["note"] = note
+            continue
+        m = re.match(r"\s+(reason|regulation|delegated_authority_limit_eur|error_code):\s*(.+)", line)
+        if m:
+            cur["advice"][m.group(1)] = m.group(2).strip()
 
-
-def _close_session():
-    """Resolve the internal session id from the audit export, then close it."""
-    export, status = _gw("GET", f"/audit/export?session_id={SESSION_LABEL}")
-    if status != 200:
-        return {"error": "no session yet -- make a tool call first"}, 409
-    entries = export.get("entries", [])
-    if not entries:
-        return {"error": "no session yet -- make a tool call first"}, 409
-    internal = entries[0]["session_id"]
-    claim, status = _gw("POST", f"/sessions/{internal}/close", {})
-    if status == 200:
+    if claim:
         WORKSPACE.mkdir(exist_ok=True)
         CLAIM_FILE.write_text(json.dumps(claim, indent=2))
-    return claim, status
+    return {"scenario": scenario, "steps": steps, "claim": claim}
 
 
 def _verify():
     if not CLAIM_FILE.exists():
-        return {"error": "no claim yet -- close the session first"}, 409
+        return {"error": "run an assessment first"}, 409
     env = os.environ.copy()
     env["CMCP_DEV_MODE"] = "1"
     proc = subprocess.run([_find_cmcp(), "verify", str(CLAIM_FILE)],
@@ -113,68 +138,54 @@ def _verify():
 
 
 class Handler(BaseHTTPRequestHandler):
-    def log_message(self, *a):  # keep the terminal quiet
+    def log_message(self, *a):
         pass
 
-    def _send(self, status, body, content_type="application/json"):
+    def _send(self, status, body, ct="application/json"):
         if isinstance(body, (dict, list)):
             body = json.dumps(body).encode()
         elif isinstance(body, str):
             body = body.encode()
         self.send_response(status)
-        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Type", ct)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
     def do_GET(self):
         if self.path in ("/", "/index.html"):
-            return self._serve_static("index.html")
+            return self._serve("index.html")
         if self.path.startswith("/web/"):
-            return self._serve_static(self.path[len("/web/"):])
-        if self.path == "/api/policy":
-            catalog = json.loads(CATALOG_FILE.read_text())
-            tools = [{"tool_name": c["tool_name"],
-                      "description": c["approved_definition"]["description"]}
-                     for c in catalog]
-            return self._send(200, {"policy": POLICY_FILE.read_text(), "tools": tools,
-                                    "gateway": GATEWAY, "workspace": str(WORKSPACE)})
+            return self._serve(self.path[len("/web/"):])
+        if self.path == "/api/context":
+            catalog = json.loads((EXAMPLE / "catalog.json").read_text(encoding="utf-8"))
+            tools = [{"tool_name": c["tool_name"], "compliance_domain": c.get("compliance_domain"),
+                      "sensitivity_level": c.get("sensitivity_level"),
+                      "description": c["approved_definition"]["description"]} for c in catalog]
+            return self._send(200, {
+                "scenarios": SCENARIOS, "tools": tools, "guardrails": GUARDRAILS,
+                "policy": (EXAMPLE / "policy" / "allow.cedar").read_text(encoding="utf-8"),
+                "gateway": GATEWAY,
+            })
         return self._send(404, {"error": "not found"})
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
         payload = json.loads(self.rfile.read(length) or b"{}") if length else {}
-
-        if self.path == "/api/call":
-            tool = payload.get("tool")
-            args = payload.get("arguments", {})
-            body, status = _tool_call(tool, args)
-            allowed = status == 200
-            decision = "allow" if allowed else (
-                "deny" if body.get("error", {}).get("data", {}).get("error_code") == "POLICY_DENY"
-                else "error")
-            text = None
-            if allowed:
-                try:
-                    text = body["result"]["content"][0]["text"]
-                except (KeyError, IndexError, TypeError):
-                    text = None
-            return self._send(200, {"tool": tool, "http_status": status, "decision": decision,
-                                    "text": text, "response": body})
-        if self.path == "/api/close":
-            body, status = _close_session()
-            return self._send(200 if status == 200 else status, body)
+        if self.path == "/api/run":
+            scenario = payload.get("scenario", "clean")
+            if scenario not in {s["id"] for s in SCENARIOS}:
+                return self._send(400, {"error": "unknown scenario"})
+            try:
+                return self._send(200, _run_agent(scenario))
+            except subprocess.TimeoutExpired:
+                return self._send(504, {"error": "agent run timed out"})
         if self.path == "/api/verify":
             body, status = _verify()
             return self._send(status, body)
-        if self.path == "/api/reset":
-            # the gateway rotates its session on close; here we just clear the saved claim
-            if CLAIM_FILE.exists():
-                CLAIM_FILE.unlink()
-            return self._send(200, {"ok": True})
         return self._send(404, {"error": "not found"})
 
-    def _serve_static(self, rel):
+    def _serve(self, rel):
         target = (WEB / rel).resolve()
         if not str(target).startswith(str(WEB.resolve())) or not target.is_file():
             return self._send(404, "not found", "text/plain")
