@@ -1,67 +1,65 @@
-# Web console -- cMCP in the browser
+# Web console -- cMCP credit-risk assessment
 
-The same enforcement the other demos show on the command line, in a small web UI
-you can click through in front of an audience. The scenario is a bank support
-agent: it can look up accounts and customers, but policy forbids it from moving
-money or exporting records. Every number on the page comes from the real
-gateway -- real tool calls, real Cedar decisions, the real signed TRACE record,
-and the real `cmcp verify` output.
+A browser console for showing cMCP on a screen. It runs the **real
+financial-services example** from `agentrust-io/examples` (an EU corporate
+credit-risk agent) unmodified, behind a small web UI. Nothing here is a copy:
+the tool server, Cedar policy, catalog, and agent all come from that repo,
+pulled in as a git submodule under `vendor/`.
 
 ```
-pip install cmcp-runtime
-python web-console/run.py
+pip install cmcp-runtime httpx
+git clone --recurse-submodules https://github.com/agentrust-io/demos.git   # or run.py inits the submodule
+python demos/web-console/run.py            # opens http://localhost:8000
 ```
 
-`run.py` starts three local processes and opens the console at
-`http://localhost:8000`:
+`run.py` starts three local processes and opens the console:
 
-- a mock core-banking MCP server on `:9001` (`tools_server.py`)
+- the example's mock EU credit-risk MCP server on `:8080`
 - the cMCP gateway on `:8443` (`CMCP_DEV_MODE=1`, software-only TEE)
 - this demo's web server on `:8000`
 
-Press Ctrl+C in the terminal to stop all three.
+Ctrl+C stops all three. (If the submodule is empty, `run.py` runs
+`git submodule update --init` for you.)
 
-## What to click
+## What it shows
 
-1. **`get_balance`** and **`get_customer`** -- Cedar permits them. The call is
-   forwarded to the tool and you see the real record (PII fields come back
-   masked).
-2. **`transfer_funds`** and **`export_records`** -- Cedar forbids them. The
-   gateway returns HTTP 403 (`POLICY_DENY`) and the tool is never contacted.
-   The agent can read, but it cannot move money or bulk-export data.
-3. **Close session -> TRACE record** -- the gateway signs a `GatewayClaim`:
-   which tools ran, which were denied, the policy bundle hash, an Ed25519
-   signature. Saved to `workspace/web-console-claim.json`.
-4. **Verify record offline** -- runs `cmcp verify` against the saved record.
-   In software-only mode the result is `partially_verified`: every
-   cryptographic field checks out, only the hardware root is absent. On real
-   TDX / SEV-SNP that last check passes too and it reads `verified`.
+An AI agent runs a six-step credit assessment through the gateway. It reads the
+client's filings, screens for sanctions, pulls a credit-bureau report,
+aggregates group exposure, and runs the PD/LGD model -- then passes that outcome
+into the write. Cedar enforces the bank's controls **on the result**, so the
+write is only recorded if the assessment passes them. Three obligors:
 
-The **Policy** tab shows the exact Cedar bundle the gateway loaded. Its hash is
-measured into the attestation at startup, so the policy that ran is provably the
-one you approved.
+| Scenario | Obligor | Write | Blocked by |
+|---|---|---|---|
+| Performing | Rheintal Präzisionstechnik GmbH, €250k | allowed | -- |
+| Concentration breach | Nordwind Logistik AG, €750k | blocked | CRR Art. 395 / EBA/GL/2020/06 |
+| Sanctions / impaired | Meridian Trading DMCC, €200k | blocked | IFRS 9 (stage 3) |
+
+Each deny carries the regulation and reason back as structured advice. Close the
+session for the signed `RuntimeClaim`, then verify it offline with `cmcp verify`
+(reads `partially_verified` in software-only mode; `verified` on real TDX /
+SEV-SNP).
+
+The **Policy** tab shows the Cedar bundle the gateway loaded and maps each
+guardrail to the control it enforces. **What this shows** explains the four
+properties the demo proves.
 
 ## How it fits together
 
 The browser never talks to the gateway directly. `webserver.py` serves the UI
-and forwards to the gateway server-side, holding the bearer token so it stays
-out of the browser and there is no CORS to configure. It is a thin proxy over
-the same HTTP endpoints the CLI demos use (`POST /mcp`, `GET /audit/export`,
-`POST /sessions/{id}/close`).
-
-The Cedar policy uses the action dialect the runtime evaluates
-(`get_balance -> Action::"GetBalance"`). Nothing here is mocked except the tool
-backend, and even that returns realistic records.
+and, on **Run**, executes the example's own agent
+(`vendor/examples/financial-services/agent/credit_risk_agent.py`) as a
+subprocess against the gateway, then parses its output into the step timeline.
+`run.py` supplies only a loopback gateway config that points at the example's
+policy and catalog where they live -- it does not copy them. Bumping the
+submodule pointer updates the example.
 
 ## Files
 
 ```
 web-console/
-  run.py            launcher (tool server + gateway + web server)
-  webserver.py      static UI + /api proxy to the gateway
-  tools_server.py   mock core-banking MCP server (read + write/export tools)
-  cmcp-config.yaml  gateway config (enforcing, software-only)
-  catalog.json      approved tools
-  policies/         Cedar bundle
+  run.py            launcher (submodule init + example server + gateway + web server)
+  webserver.py      static UI + /api (runs the example agent, runs cmcp verify)
   web/              index.html, app.js, styles.css
+  vendor/examples/  git submodule -> agentrust-io/examples (the real scenario)
 ```

@@ -1,97 +1,101 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>cMCP console</title>
+  <title>cMCP console -- credit-risk assessment</title>
   <link rel="stylesheet" href="/web/styles.css">
 </head>
 <body>
-  <header class="bar">
-    <div class="bar-left">
-      <span class="mark">cMCP</span>
-      <span class="sub">console &middot; local &middot; software-only TEE</span>
-    </div>
-    <div class="bar-right">
-      <span id="status" class="status"><span class="d"></span> checking gateway…</span>
-      <span id="workspace" class="ws"></span>
-    </div>
-  </header>
-
-  <main class="grid">
-    <aside class="side">
-      <section class="block">
-        <h2>Tool calls</h2>
-        <p class="hint">A bank support agent, wired to its tools through the cMCP gateway. It may read; policy forbids it from moving money or exporting records. Cedar decides every call.</p>
-
-        <div class="tool">
-          <div class="tool-head"><code>get_balance</code><span class="exp allow">permit</span></div>
-          <label>account_id <input id="gb-account" value="AC-4821"></label>
-          <button class="run" data-tool="get_balance">Send call</button>
-        </div>
-
-        <div class="tool">
-          <div class="tool-head"><code>get_customer</code><span class="exp allow">permit</span></div>
-          <label>customer_id <input id="gc-customer" value="C-10293"></label>
-          <button class="run" data-tool="get_customer">Send call</button>
-        </div>
-
-        <div class="tool">
-          <div class="tool-head"><code>transfer_funds</code><span class="exp deny">forbid</span></div>
-          <label>from account <input id="tf-from" value="AC-4821"></label>
-          <label>to account <input id="tf-to" value="AC-9999"></label>
-          <label>amount <input id="tf-amount" value="2500"></label>
-          <button class="run" data-tool="transfer_funds">Send call</button>
-        </div>
-
-        <div class="tool">
-          <div class="tool-head"><code>export_records</code><span class="exp deny">forbid</span></div>
-          <label>dataset <input id="er-dataset" value="customers"></label>
-          <button class="run" data-tool="export_records">Send call</button>
-        </div>
-      </section>
-
-      <section class="block">
-        <h2>Session</h2>
-        <button id="close" class="act">Close session &rarr; TRACE record</button>
-        <button id="verify" class="act" disabled>Verify record offline</button>
-        <button id="reset" class="act ghost">Reset</button>
-      </section>
+  <div class="app">
+    <aside class="nav">
+      <div class="brand"><span class="wordmark">OPAQUE</span><span class="brand-sub">Confidential MCP</span></div>
+      <nav>
+        <button class="navitem active" data-view="run"><span class="gi"></span>Assessment</button>
+        <button class="navitem" data-view="policy"><span class="gi"></span>Policy</button>
+        <button class="navitem" data-view="record"><span class="gi"></span>Trust record</button>
+        <button class="navitem" data-view="about"><span class="gi"></span>What this shows</button>
+      </nav>
+      <div class="nav-foot">
+        <div class="stat"><span class="d"></span><span id="gw-status">gateway :8443</span></div>
+        <div class="stat mut">software-only TEE &middot; dev mode</div>
+      </div>
     </aside>
 
-    <section class="content">
-      <div class="tabs" role="tablist">
-        <button class="tab active" data-panel="activity">Activity</button>
-        <button class="tab" data-panel="policy">Policy</button>
-        <button class="tab" data-panel="record">TRACE record</button>
-        <button class="tab" data-panel="verify">Verification</button>
-      </div>
+    <main class="main">
+      <!-- Assessment -->
+      <section class="view active" id="view-run">
+        <header class="vhead">
+          <div>
+            <h1>Corporate credit-risk assessment</h1>
+            <p>An AI agent runs a six-step assessment through the cMCP gateway. Cedar enforces the bank's controls, and the write is only recorded if the assessment result passes them.</p>
+          </div>
+        </header>
 
-      <div class="panel active" id="panel-activity">
-        <div id="activity" class="activity"></div>
-        <p id="activity-empty" class="empty">No calls yet. Send one from the left.</p>
-      </div>
+        <div class="scenarios" id="scenarios"></div>
 
-      <div class="panel" id="panel-policy">
-        <p class="panel-note">The Cedar bundle the gateway loaded. Its hash is measured into the attestation at startup, so the policy that ran is provably the one you approved.</p>
+        <div class="runbar">
+          <button id="run" class="primary">Run assessment</button>
+          <span id="run-hint" class="mut">Pick an obligor, then run.</span>
+        </div>
+
+        <div id="summary" class="summary hide"></div>
+        <ol id="timeline" class="timeline"></ol>
+      </section>
+
+      <!-- Policy -->
+      <section class="view" id="view-policy">
+        <header class="vhead"><div>
+          <h1>Policy</h1>
+          <p>The Cedar bundle the gateway loaded. Its hash is measured into the hardware attestation at startup, so the policy that ran is provably the one that was approved. Each guardrail carries the control it enforces.</p>
+        </div></header>
+        <h2 class="sec">Guardrails on the write</h2>
+        <div id="guardrails" class="guardrails"></div>
+        <h2 class="sec">allow.cedar</h2>
         <pre id="policy" class="code"></pre>
-        <h3>Catalog</h3>
-        <div id="catalog" class="catalog"></div>
-      </div>
+      </section>
 
-      <div class="panel" id="panel-record">
-        <p class="panel-note">The signed <code>GatewayClaim</code> returned when the session closes: what ran, what was denied, the policy hash, and an Ed25519 signature.</p>
-        <pre id="record" class="code">Close the session to produce a record.</pre>
-      </div>
+      <!-- Trust record -->
+      <section class="view" id="view-record">
+        <header class="vhead"><div>
+          <h1>Trust record</h1>
+          <p>The signed <code>RuntimeClaim</code> produced when the session closes: which tools ran, which were denied, the policy hash, and an Ed25519 signature. Verify it offline -- no gateway, no network, no trust in the operator.</p>
+        </div></header>
+        <div class="rec-actions">
+          <button id="verify" class="primary" disabled>Verify record offline</button>
+          <span id="rec-hint" class="mut">Run an assessment to produce a record.</span>
+        </div>
+        <div class="rec-grid">
+          <div>
+            <h2 class="sec">cmcp verify</h2>
+            <div id="verify-checks" class="checks"></div>
+            <div id="verify-result"></div>
+          </div>
+          <div>
+            <h2 class="sec">RuntimeClaim</h2>
+            <pre id="record" class="code">Run an assessment first.</pre>
+          </div>
+        </div>
+      </section>
 
-      <div class="panel" id="panel-verify">
-        <p class="panel-note">Output of <code>cmcp verify</code> run against the saved record. No gateway, no network, no trust in the operator.</p>
-        <div id="verify-checks" class="checks"></div>
-        <pre id="verify-raw" class="code">Verify a record to see the result.</pre>
-      </div>
-    </section>
-  </main>
-
+      <!-- About -->
+      <section class="view" id="view-about">
+        <header class="vhead"><div>
+          <h1>What this shows</h1>
+          <p>A real corporate credit-risk agent, running unmodified from the <code>agentrust-io/examples</code> repository, governed by cMCP.</p>
+        </div></header>
+        <div class="cards">
+          <div class="pt"><h3>Proof of which tools ran</h3><p>The gateway records every tool call in a hash-chained audit log and seals the session into a signed Trust Record. An auditor can verify exactly which tools ran, in what order, and what was denied -- without trusting the agent process.</p></div>
+          <div class="pt"><h3>Policy as machine-readable compliance</h3><p>The bank's controls are written directly in Cedar. Each block returns the regulation and the reason as structured advice, so the caller knows why a write was refused and who must review it.</p></div>
+          <div class="pt"><h3>Controls fire on the result</h3><p>The agent screens the client, pulls a bureau report, aggregates exposure, and runs the model, then passes that outcome into the write. The guardrails act on the real assessment -- CDD status, IFRS 9 stage, concentration, facility size -- not on the request.</p></div>
+          <div class="pt"><h3>Attestation-gated data</h3><p>A Cedar rule forbids confidential (MNPI) tools unless the runtime presents attestation evidence. On real TDX or SEV-SNP the Trust Record's hardware check verifies too; in dev mode it reads <code>partially_verified</code>.</p></div>
+        </div>
+        <h2 class="sec">The six tools</h2>
+        <div id="tools" class="tools"></div>
+        <p class="foot-note">Source: <code>vendor/examples/financial-services</code> (git submodule). The obligors are fictional German Mittelstand companies with format-valid LEIs and IBANs; the guardrails and regulations are real.</p>
+      </section>
+    </main>
+  </div>
   <script src="/web/app.js"></script>
 </body>
 </html>
