@@ -1,0 +1,106 @@
+[
+  {
+    "tool_name": "write_file",
+    "server": {
+      "display_name": "Demo Filesystem MCP Server",
+      "url": "http://localhost:9001/mcp",
+      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "transport": "http-sse"
+    },
+    "approved_definition": {
+      "description": "Write content to a file in the demo workspace",
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "path",
+          "content"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "compliance_domain": "public",
+    "requires_baa": false,
+    "sensitivity_level": "public",
+    "added_at": "2026-06-22T00:00:00Z",
+    "approved_by": "demo-setup",
+    "definition_hash": "sha256:7b4738feb4a0c18b2870276996a14d8c2241380c063815cb98b54cb200e7e0d2"
+  },
+  {
+    "tool_name": "read_file",
+    "server": {
+      "display_name": "Demo Filesystem MCP Server",
+      "url": "http://localhost:9001/mcp",
+      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "transport": "http-sse"
+    },
+    "approved_definition": {
+      "description": "Read a file from the demo workspace",
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "compliance_domain": "public",
+    "requires_baa": false,
+    "sensitivity_level": "public",
+    "added_at": "2026-06-22T00:00:00Z",
+    "approved_by": "demo-setup",
+    "definition_hash": "sha256:3bdb3d438df2208aa5b293e0d71260f808365d6fcef4a9cf44702ebed1acc6cc"
+  },
+  {
+    "tool_name": "list_dir",
+    "server": {
+      "display_name": "Demo Filesystem MCP Server",
+      "url": "http://localhost:9001/mcp",
+      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "transport": "http-sse"
+    },
+    "approved_definition": {
+      "description": "List files in the demo workspace",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "compliance_domain": "public",
+    "requires_baa": false,
+    "sensitivity_level": "public",
+    "added_at": "2026-06-22T00:00:00Z",
+    "approved_by": "demo-setup",
+    "definition_hash": "sha256:215e8f06120f876cb19bb766a54042a31d521b54cf731f6893c975e4e0861e78"
+  }
+]
