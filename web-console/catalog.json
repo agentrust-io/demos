@@ -1,25 +1,21 @@
 [
   {
-    "tool_name": "write_file",
+    "tool_name": "get_balance",
     "server": {
-      "display_name": "Demo Filesystem MCP Server",
+      "display_name": "Core Banking MCP Server (mock)",
       "url": "http://localhost:9001/mcp",
       "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       "transport": "http-sse"
     },
     "approved_definition": {
-      "description": "Write content to a file in the demo workspace",
+      "description": "Look up the balance for a bank account",
       "input_schema": {
         "type": "object",
         "required": [
-          "path",
-          "content"
+          "account_id"
         ],
         "properties": {
-          "path": {
-            "type": "string"
-          },
-          "content": {
+          "account_id": {
             "type": "string"
           }
         }
@@ -33,30 +29,30 @@
         }
       }
     },
-    "compliance_domain": "public",
+    "definition_hash": "sha256:7affd4526385567bbce7c86df1b15dd614c0559aaf12213a063e123af9ef8a7d",
+    "compliance_domain": "internal",
     "requires_baa": false,
-    "sensitivity_level": "public",
-    "added_at": "2026-06-22T00:00:00Z",
-    "approved_by": "demo-setup",
-    "definition_hash": "sha256:7b4738feb4a0c18b2870276996a14d8c2241380c063815cb98b54cb200e7e0d2"
+    "sensitivity_level": "confidential",
+    "added_at": "2026-07-01T00:00:00Z",
+    "approved_by": "security-team"
   },
   {
-    "tool_name": "read_file",
+    "tool_name": "get_customer",
     "server": {
-      "display_name": "Demo Filesystem MCP Server",
+      "display_name": "Core Banking MCP Server (mock)",
       "url": "http://localhost:9001/mcp",
       "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       "transport": "http-sse"
     },
     "approved_definition": {
-      "description": "Read a file from the demo workspace",
+      "description": "Look up a customer profile (PII fields returned masked)",
       "input_schema": {
         "type": "object",
         "required": [
-          "path"
+          "customer_id"
         ],
         "properties": {
-          "path": {
+          "customer_id": {
             "type": "string"
           }
         }
@@ -64,43 +60,99 @@
       "output_schema": {
         "type": "object",
         "properties": {
-          "content": {
+          "result": {
             "type": "string"
           }
         }
       }
     },
-    "compliance_domain": "public",
+    "definition_hash": "sha256:b424e55dce58f35ff97127904df9a7f837279ede56c604a99988078198fec33e",
+    "compliance_domain": "pii",
     "requires_baa": false,
-    "sensitivity_level": "public",
-    "added_at": "2026-06-22T00:00:00Z",
-    "approved_by": "demo-setup",
-    "definition_hash": "sha256:3bdb3d438df2208aa5b293e0d71260f808365d6fcef4a9cf44702ebed1acc6cc"
+    "sensitivity_level": "pii",
+    "added_at": "2026-07-01T00:00:00Z",
+    "approved_by": "security-team"
   },
   {
-    "tool_name": "list_dir",
+    "tool_name": "transfer_funds",
     "server": {
-      "display_name": "Demo Filesystem MCP Server",
+      "display_name": "Core Banking MCP Server (mock)",
       "url": "http://localhost:9001/mcp",
       "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       "transport": "http-sse"
     },
     "approved_definition": {
-      "description": "List files in the demo workspace",
+      "description": "Move money between accounts",
       "input_schema": {
         "type": "object",
+        "required": [
+          "from_account",
+          "to_account",
+          "amount"
+        ],
         "properties": {
-          "path": {
+          "from_account": {
+            "type": "string"
+          },
+          "to_account": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
             "type": "string"
           }
         }
       }
     },
-    "compliance_domain": "public",
+    "definition_hash": "sha256:b594a0959a0fe472d219844ff47812a174014d12ae8dd1cd078c8e6446311d48",
+    "compliance_domain": "pci_data",
     "requires_baa": false,
-    "sensitivity_level": "public",
-    "added_at": "2026-06-22T00:00:00Z",
-    "approved_by": "demo-setup",
-    "definition_hash": "sha256:215e8f06120f876cb19bb766a54042a31d521b54cf731f6893c975e4e0861e78"
+    "sensitivity_level": "confidential",
+    "added_at": "2026-07-01T00:00:00Z",
+    "approved_by": "security-team"
+  },
+  {
+    "tool_name": "export_records",
+    "server": {
+      "display_name": "Core Banking MCP Server (mock)",
+      "url": "http://localhost:9001/mcp",
+      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "transport": "http-sse"
+    },
+    "approved_definition": {
+      "description": "Bulk-export records from a dataset",
+      "input_schema": {
+        "type": "object",
+        "required": [
+          "dataset"
+        ],
+        "properties": {
+          "dataset": {
+            "type": "string"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "definition_hash": "sha256:4e09969b2f6543bcd2cb89a31ff2d05ec80c2f4323b0ff00bf666c307532ca10",
+    "compliance_domain": "pii",
+    "requires_baa": false,
+    "sensitivity_level": "confidential",
+    "added_at": "2026-07-01T00:00:00Z",
+    "approved_by": "security-team"
   }
 ]

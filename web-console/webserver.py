@@ -22,7 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HERE = pathlib.Path(__file__).parent.resolve()
 WEB = HERE / "web"
 WORKSPACE = HERE.parent / "workspace"
-POLICY_FILE = HERE / "policies" / "allow-filesystem-tools.cedar"
+POLICY_FILE = HERE / "policies" / "support-agent.cedar"
 CATALOG_FILE = HERE / "catalog.json"
 CLAIM_FILE = WORKSPACE / "web-console-claim.json"
 

@@ -28,9 +28,12 @@ async function loadPolicy() {
 }
 
 const TOOL_ARGS = {
-  write_file: () => ({ path: $("#wf-path").value, content: $("#wf-content").value }),
-  read_file: () => ({ path: $("#rf-path").value }),
-  list_dir: () => ({}),
+  get_balance: () => ({ account_id: $("#gb-account").value }),
+  get_customer: () => ({ customer_id: $("#gc-customer").value }),
+  transfer_funds: () => ({
+    from_account: $("#tf-from").value, to_account: $("#tf-to").value, amount: Number($("#tf-amount").value),
+  }),
+  export_records: () => ({ dataset: $("#er-dataset").value }),
 };
 
 function activityEntry({ tool, http_status, decision, text, request, response }) {
