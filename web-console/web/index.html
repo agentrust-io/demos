@@ -22,25 +22,32 @@
     <aside class="side">
       <section class="block">
         <h2>Tool calls</h2>
-        <p class="hint">Each call goes to the agent, through the cMCP gateway, then to the tool. Cedar decides every one.</p>
+        <p class="hint">A bank support agent, wired to its tools through the cMCP gateway. It may read; policy forbids it from moving money or exporting records. Cedar decides every call.</p>
 
         <div class="tool">
-          <div class="tool-head"><code>write_file</code><span class="exp allow">permit</span></div>
-          <label>path <input id="wf-path" value="hello.txt"></label>
-          <label>content <input id="wf-content" value="written under Cedar enforcement"></label>
-          <button class="run" data-tool="write_file">Send call</button>
+          <div class="tool-head"><code>get_balance</code><span class="exp allow">permit</span></div>
+          <label>account_id <input id="gb-account" value="AC-4821"></label>
+          <button class="run" data-tool="get_balance">Send call</button>
         </div>
 
         <div class="tool">
-          <div class="tool-head"><code>read_file</code><span class="exp allow">permit</span></div>
-          <label>path <input id="rf-path" value="hello.txt"></label>
-          <button class="run" data-tool="read_file">Send call</button>
+          <div class="tool-head"><code>get_customer</code><span class="exp allow">permit</span></div>
+          <label>customer_id <input id="gc-customer" value="C-10293"></label>
+          <button class="run" data-tool="get_customer">Send call</button>
         </div>
 
         <div class="tool">
-          <div class="tool-head"><code>list_dir</code><span class="exp deny">forbid</span></div>
-          <p class="hint sm">Blocked by policy. The gateway returns 403 and the tool is never reached.</p>
-          <button class="run" data-tool="list_dir">Send call</button>
+          <div class="tool-head"><code>transfer_funds</code><span class="exp deny">forbid</span></div>
+          <label>from account <input id="tf-from" value="AC-4821"></label>
+          <label>to account <input id="tf-to" value="AC-9999"></label>
+          <label>amount <input id="tf-amount" value="2500"></label>
+          <button class="run" data-tool="transfer_funds">Send call</button>
+        </div>
+
+        <div class="tool">
+          <div class="tool-head"><code>export_records</code><span class="exp deny">forbid</span></div>
+          <label>dataset <input id="er-dataset" value="customers"></label>
+          <button class="run" data-tool="export_records">Send call</button>
         </div>
       </section>
 

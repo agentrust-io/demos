@@ -44,9 +44,9 @@ def main():
     cmcp_log = open(HERE / "cmcp.log", "w")
     procs = []
     try:
-        print("-- MCP filesystem server on :9001", flush=True)
+        print("-- Core banking MCP server on :9001", flush=True)
         procs.append(subprocess.Popen(
-            [sys.executable, str(REPO_ROOT / "server" / "server.py")],
+            [sys.executable, str(HERE / "tools_server.py")],
             stdout=server_log, stderr=server_log))
         time.sleep(1)
 
