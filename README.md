@@ -38,6 +38,18 @@ Each demo has a `run.py` (works on any OS) and a `run.sh` (bash only). Server an
 
 ---
 
+## Browser console
+
+A point-and-click version of the same enforcement, for showing on a screen instead of a terminal.
+
+```
+python web-console/run.py
+```
+
+Opens `http://localhost:8000`. Send tool calls and watch Cedar allow and deny them, close the session into a signed TRACE record, then verify it offline -- every result comes from the real gateway. See [`web-console/README.md`](web-console/README.md).
+
+---
+
 ## Demo 1 -- cMCP in action (~90 seconds)
 
 The agent calls three tools through the cMCP gateway. Cedar policy is enforced for every call. At session close, the gateway produces a signed TRACE claim carrying the policy bundle hash.

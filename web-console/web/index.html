@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cMCP console</title>
+  <link rel="stylesheet" href="/web/styles.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-left">
+      <span class="mark">cMCP</span>
+      <span class="sub">console &middot; local &middot; software-only TEE</span>
+    </div>
+    <div class="bar-right">
+      <span id="status" class="status"><span class="d"></span> checking gateway…</span>
+      <span id="workspace" class="ws"></span>
+    </div>
+  </header>
+
+  <main class="grid">
+    <aside class="side">
+      <section class="block">
+        <h2>Tool calls</h2>
+        <p class="hint">Each call goes to the agent, through the cMCP gateway, then to the tool. Cedar decides every one.</p>
+
+        <div class="tool">
+          <div class="tool-head"><code>write_file</code><span class="exp allow">permit</span></div>
+          <label>path <input id="wf-path" value="hello.txt"></label>
+          <label>content <input id="wf-content" value="written under Cedar enforcement"></label>
+          <button class="run" data-tool="write_file">Send call</button>
+        </div>
+
+        <div class="tool">
+          <div class="tool-head"><code>read_file</code><span class="exp allow">permit</span></div>
+          <label>path <input id="rf-path" value="hello.txt"></label>
+          <button class="run" data-tool="read_file">Send call</button>
+        </div>
+
+        <div class="tool">
+          <div class="tool-head"><code>list_dir</code><span class="exp deny">forbid</span></div>
+          <p class="hint sm">Blocked by policy. The gateway returns 403 and the tool is never reached.</p>
+          <button class="run" data-tool="list_dir">Send call</button>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Session</h2>
+        <button id="close" class="act">Close session &rarr; TRACE record</button>
+        <button id="verify" class="act" disabled>Verify record offline</button>
+        <button id="reset" class="act ghost">Reset</button>
+      </section>
+    </aside>
+
+    <section class="content">
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-panel="activity">Activity</button>
+        <button class="tab" data-panel="policy">Policy</button>
+        <button class="tab" data-panel="record">TRACE record</button>
+        <button class="tab" data-panel="verify">Verification</button>
+      </div>
+
+      <div class="panel active" id="panel-activity">
+        <div id="activity" class="activity"></div>
+        <p id="activity-empty" class="empty">No calls yet. Send one from the left.</p>
+      </div>
+
+      <div class="panel" id="panel-policy">
+        <p class="panel-note">The Cedar bundle the gateway loaded. Its hash is measured into the attestation at startup, so the policy that ran is provably the one you approved.</p>
+        <pre id="policy" class="code"></pre>
+        <h3>Catalog</h3>
+        <div id="catalog" class="catalog"></div>
+      </div>
+
+      <div class="panel" id="panel-record">
+        <p class="panel-note">The signed <code>GatewayClaim</code> returned when the session closes: what ran, what was denied, the policy hash, and an Ed25519 signature.</p>
+        <pre id="record" class="code">Close the session to produce a record.</pre>
+      </div>
+
+      <div class="panel" id="panel-verify">
+        <p class="panel-note">Output of <code>cmcp verify</code> run against the saved record. No gateway, no network, no trust in the operator.</p>
+        <div id="verify-checks" class="checks"></div>
+        <pre id="verify-raw" class="code">Verify a record to see the result.</pre>
+      </div>
+    </section>
+  </main>
+
+  <script src="/web/app.js"></script>
+</body>
+</html>
