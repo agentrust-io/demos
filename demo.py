@@ -3,7 +3,7 @@
 
     python demo.py              # run all, pausing before each (for live talks)
     python demo.py --no-pause   # run straight through, no prompts
-    python demo.py 2            # run only demo 2 (1 through 5)
+    python demo.py 2            # run only demo 2 (1 through 6)
 
 The trust chain, end to end:
     Demo 1  cMCP enforces Cedar on every tool call and signs a TRACE claim.
@@ -13,6 +13,10 @@ The trust chain, end to end:
 Then, on a second axis, three ways the policy decides a call:
     Demo 4  by call context   -- the same tool, allowed in one workflow, denied in another.
     Demo 5  by tool attribute -- a non-BAA-covered tool refused by one guardrail rule.
+
+And the layer beneath it all, the weights themselves:
+    Demo 6  Weight custody -- a signed manifest binds the exact weight hash; a tampered
+            checkpoint is refused before load, and a fine-tune's lineage verifies to the base.
 
 All demos run in software-only mode (CMCP_DEV_MODE=1). That is deliberate: software
 proves the whole chain except the hardware root, so verification reads
@@ -48,6 +52,11 @@ DEMOS = [
      "demo-05-compliance-domain/run.py",
      "A tool that is not BAA-covered is refused by one guardrail rule, whatever it is\n"
      "  named. The decision is on the tool's compliance attribute, not its identity."),
+    ("6", "Weight custody",
+     "demo-06-weight-custody/run.py",
+     "A checkpoint signed to its exact weight hash. Attestation gates the key, a\n"
+     "  tampered fork is refused before load, and a fine-tune's lineage verifies back to\n"
+     "  the signed base. Possession is not provenance."),
 ]
 
 GREEN = "\033[92m"; BLUE = "\033[96m"; DIM = "\033[90m"; BOLD = "\033[1m"; RST = "\033[0m"
@@ -147,7 +156,7 @@ def run(idx, title, script, blurb, pause):
 
 def main():
     ap = argparse.ArgumentParser(description="Run the agentrust-io trust-chain demos.")
-    ap.add_argument("only", nargs="?", choices=["1", "2", "3", "4", "5"], help="run only this demo")
+    ap.add_argument("only", nargs="?", choices=["1", "2", "3", "4", "5", "6"], help="run only this demo")
     ap.add_argument("--no-pause", action="store_true", help="run straight through, no prompts")
     args = ap.parse_args()
 
