@@ -64,7 +64,9 @@ button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .summary.allow{background:rgba(16,186,135,.1);border-color:rgba(16,186,135,.4)}
 .summary.deny{background:rgba(225,118,90,.1);border-color:rgba(225,118,90,.4)}
 .summary .st{font-weight:700}
+.summary.tampered{background:rgba(237,174,90,.1);border-color:rgba(237,174,90,.5)}
 .summary.allow .st{color:var(--green)} .summary.deny .st{color:var(--umber)}
+.summary.tampered .st{color:#edae5a}
 .summary .reg{font-family:var(--mono);font-size:11px;margin-left:8px;padding:2px 7px;border-radius:5px;background:rgba(0,0,0,.25)}
 
 /* timeline */
@@ -105,6 +107,30 @@ button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .rslt{padding:12px 15px;border-radius:9px;font-family:var(--mono);font-size:12.5px;border:1px solid var(--line2);background:var(--panel)}
 .rslt.partial{border-color:rgba(226,201,158,.4)} .rslt.partial b{color:var(--sand)}
 .rslt.verified{border-color:rgba(16,186,135,.4)} .rslt.verified b{color:var(--green)}
+
+/* policy variant -- approved bundle vs the one an operator edited */
+.variants{margin:18px 0 6px}
+.vlabel{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+.vrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.var{display:flex;flex-direction:column;gap:2px;text-align:left;cursor:pointer;
+  background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:9px 14px;color:var(--ink2)}
+.var:hover{border-color:var(--line2)}
+.var .vname{font-size:13.5px;font-weight:650;color:var(--ink)}
+.var .vdesc{font-size:11.5px;color:var(--mut)}
+.var.sel{border-color:var(--green)}
+.var.sel .vname{color:var(--green)}
+.var[data-variant="tampered"].sel{border-color:var(--umber)}
+.var[data-variant="tampered"].sel .vname{color:var(--umber)}
+.vhash{font-size:11.5px;color:var(--mut);word-break:break-all;flex:1 1 260px}
+.tamper{display:none;margin-top:12px;background:var(--panel);border:1px solid rgba(225,118,90,.4);
+  border-radius:9px;padding:12px 15px}
+.tamper.show{display:block}
+.tamper .tt{display:block;font-size:12px;font-weight:650;color:var(--umber);margin-bottom:6px}
+.tamper ul{margin:0 0 6px;padding-left:18px;font-size:12.5px;color:var(--ink2)}
+.tamper li{margin:2px 0}
+.tamper .mut{font-size:12px}
+.rslt.tampered{border-color:rgba(225,118,90,.5)} .rslt.tampered b{color:var(--umber)}
+.rslt.pinned{color:var(--mut)} .rslt.pinned code{color:var(--ink2);word-break:break-all}
 
 /* about */
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}

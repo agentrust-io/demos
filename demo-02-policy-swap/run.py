@@ -70,11 +70,16 @@ def main() -> None:
     sys.stdout.flush()
     subprocess.run([sys.executable, str(SCRIPT_DIR / "check_hash.py")], check=True)
 
-    # Step 1: show v1 claim's policy hash
+    # Step 1: the approved (v1) bundle is the baseline a verifier pins.
+    # Compute it from the bundle itself so the value shown here is the same one
+    # printed in step 0 and pinned in step 5 -- reading it off the demo-01 claim
+    # instead showed a hash from a different bundle under the same "v1" label.
     print()
-    print("-- Step 1: TRACE claim from demo-01 --")
+    print("-- Step 1: The approved policy bundle --")
     v1_claim = json.loads(CLAIM_PATH.read_text())
-    v1_policy_hash = v1_claim["trace"]["policy"]["bundle_hash"]
+    v1_policy_hash = subprocess.check_output(
+        [sys.executable, str(SCRIPT_DIR / "check_hash.py"), "v1"], text=True
+    ).split()[1]
     catalog_hash = v1_claim["gateway"]["catalog"]["hash"]
     print(f"  v1 policy.bundle_hash: {v1_policy_hash}")
     print(f"  catalog.hash:          {catalog_hash}")

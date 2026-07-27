@@ -16,6 +16,8 @@ import subprocess
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import policy_variants
+
 HERE = pathlib.Path(__file__).parent.resolve()
 WEB = HERE / "web"
 EXAMPLE = HERE / "vendor" / "examples" / "financial-services"
@@ -25,6 +27,20 @@ CLAIM_FILE = WORKSPACE / "fs-claim.json"
 
 GATEWAY = os.environ.get("CMCP_GATEWAY_URL", "http://localhost:8443")
 PORT = int(os.environ.get("WEB_CONSOLE_PORT", "8000"))
+
+TAMPERED = policy_variants.TamperedGateway()
+_HASHES: dict[str, str] = {}
+
+
+def _policy_hashes() -> dict[str, str]:
+    """Approved and tampered bundle hashes, computed the way the runtime does.
+    Cached: the approved bundle is read-only and the tampered one is generated
+    deterministically from it."""
+    if not _HASHES:
+        _HASHES["approved"] = policy_variants.bundle_hash(policy_variants.APPROVED_DIR)
+        tampered_dir, _ = policy_variants.build_tampered()
+        _HASHES["tampered"] = policy_variants.bundle_hash(tampered_dir)
+    return _HASHES
 
 _CT = {".html": "text/html", ".js": "text/javascript", ".css": "text/css",
        ".svg": "image/svg+xml", ".json": "application/json"}
@@ -70,12 +86,12 @@ def _find_cmcp() -> str:
     return "cmcp"
 
 
-def _run_agent(scenario: str):
+def _run_agent(scenario: str, gateway: str = GATEWAY):
     """Run the real example agent and parse its output into steps + claim."""
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
     proc = subprocess.run(
-        [sys.executable, str(AGENT), "--scenario", scenario, "--gateway", GATEWAY],
+        [sys.executable, str(AGENT), "--scenario", scenario, "--gateway", gateway],
         capture_output=True, text=True, encoding="utf-8", env=env, timeout=60)
     out = (proc.stdout or "") + "\n" + (proc.stderr or "")
 
@@ -117,16 +133,30 @@ def _run_agent(scenario: str):
     if claim:
         WORKSPACE.mkdir(exist_ok=True)
         CLAIM_FILE.write_text(json.dumps(claim, indent=2))
-    return {"scenario": scenario, "steps": steps, "claim": claim}
+
+    # A run that crashed or produced no steps must not be reported as a clean
+    # pass. Previously the UI inferred "allowed" from the absence of a denied
+    # write, so a failed run rendered as a green success banner.
+    error = None
+    if proc.returncode != 0 or not steps:
+        tail = "\n".join(l for l in out.strip().splitlines()[-6:] if l.strip())
+        error = (f"the example agent exited with code {proc.returncode} and "
+                 f"produced {len(steps)} of 6 steps.\n{tail}")
+    return {"scenario": scenario, "steps": steps, "claim": claim, "error": error}
 
 
-def _verify():
+def _verify(pinned_hash: str | None = None):
+    """Verify the last record. When pinned_hash is given, the verifier is held
+    to the policy bundle it approved -- which is what makes a tampered run
+    detectable rather than merely different."""
     if not CLAIM_FILE.exists():
         return {"error": "run an assessment first"}, 409
     env = os.environ.copy()
     env["CMCP_DEV_MODE"] = "1"
-    proc = subprocess.run([_find_cmcp(), "verify", str(CLAIM_FILE)],
-                          capture_output=True, text=True, env=env)
+    cmd = [_find_cmcp(), "verify", str(CLAIM_FILE)]
+    if pinned_hash:
+        cmd += ["--policy-hash", pinned_hash]
+    proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
     raw = (proc.stdout or "") + (proc.stderr or "")
     checks = [{"name": m.group(1).strip(), "status": m.group(2)}
               for m in re.finditer(r"\[cmcp verify\]\s+(.+?)\s{2,}(PASS|FAIL)", raw)]
@@ -166,6 +196,8 @@ class Handler(BaseHTTPRequestHandler):
                 "scenarios": SCENARIOS, "tools": tools, "guardrails": GUARDRAILS,
                 "policy": (EXAMPLE / "policy" / "allow.cedar").read_text(encoding="utf-8"),
                 "gateway": GATEWAY,
+                "policy_hashes": _policy_hashes(),
+                "tamper_edits": [label for _, _, label in policy_variants.EDITS],
             })
         return self._send(404, {"error": "not found"})
 
@@ -174,14 +206,32 @@ class Handler(BaseHTTPRequestHandler):
         payload = json.loads(self.rfile.read(length) or b"{}") if length else {}
         if self.path == "/api/run":
             scenario = payload.get("scenario", "clean")
+            variant = payload.get("variant", "approved")
             if scenario not in {s["id"] for s in SCENARIOS}:
                 return self._send(400, {"error": "unknown scenario"})
+            if variant not in ("approved", "tampered"):
+                return self._send(400, {"error": "unknown policy variant"})
             try:
-                return self._send(200, _run_agent(scenario))
+                gateway, applied = GATEWAY, []
+                if variant == "tampered":
+                    gateway = TAMPERED.ensure(os.environ.copy())
+                    applied = TAMPERED.applied
+                body = _run_agent(scenario, gateway)
+                body["variant"] = variant
+                body["tamper_edits"] = applied
+                body["policy_hash"] = _policy_hashes()[variant]
+                return self._send(200, body)
             except subprocess.TimeoutExpired:
                 return self._send(504, {"error": "agent run timed out"})
+            except RuntimeError as exc:
+                return self._send(500, {"error": str(exc)})
         if self.path == "/api/verify":
-            body, status = _verify()
+            # The verifier is pinned to the APPROVED bundle: that is the whole
+            # point. A record from the tampered gateway fails this check.
+            pinned = _policy_hashes()["approved"] if payload.get("pinned", True) else None
+            body, status = _verify(pinned)
+            if isinstance(body, dict):
+                body["pinned_hash"] = pinned
             return self._send(status, body)
         return self._send(404, {"error": "not found"})
 
@@ -200,6 +250,10 @@ def main():
         srv.serve_forever()
     except KeyboardInterrupt:
         srv.shutdown()
+    finally:
+        # the tampered gateway is ours to clean up; the approved one belongs
+        # to run.py
+        TAMPERED.stop()
 
 
 if __name__ == "__main__":

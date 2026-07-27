@@ -44,6 +44,32 @@ The **Policy** tab shows the Cedar bundle the gateway loaded and maps each
 guardrail to the control it enforces. **What this shows** explains the four
 properties the demo proves.
 
+## Approved vs tampered policy
+
+The **Policy bundle** selector on the Assessment tab puts the policy-swap story
+(previously the separate terminal `demo-02-policy-swap`) in the same view. Pick
+**Tampered** and the console runs the agent against a second gateway holding an
+edited copy of the bundle: the delegated-authority ceiling raised from €500k to
+€5m, and the concentration guardrail inverted so it never fires. The tampered
+copy is generated from the approved bundle at runtime, so it cannot drift from
+the example.
+
+Run **Nordwind Logistik AG (€750k)** under each:
+
+| Bundle | Step 6, the write | Verify against the approved hash |
+|---|---|---|
+| Approved | `403 denied` — EBA/GL/2020/06 | `policy_bundle.hash` **PASS** |
+| Tampered | `200 allow` — the write lands | `policy_bundle.hash` **FAIL** |
+
+That is the whole argument for the record: enforcement did exactly what the
+loaded policy said, so the record has to prove *which* policy was loaded.
+`cmcp verify` is always pinned to the approved bundle hash — a verifier does not
+get to move the goalposts after the fact.
+
+The gateway measures the bundle at startup, so the tampered bundle needs its own
+process. It starts lazily on `:8444` the first time you select **Tampered**, and
+stops when the console exits. The approved gateway on `:8443` is untouched.
+
 ## How it fits together
 
 The browser never talks to the gateway directly. `webserver.py` serves the UI
