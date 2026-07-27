@@ -34,6 +34,26 @@
 
         <div class="scenarios" id="scenarios"></div>
 
+        <div class="variants">
+          <span class="vlabel">Policy bundle loaded by the gateway</span>
+          <div class="vrow">
+            <button class="var sel" data-variant="approved">
+              <span class="vname">Approved</span>
+              <span class="vdesc">signed off by compliance</span>
+            </button>
+            <button class="var" data-variant="tampered">
+              <span class="vname">Tampered</span>
+              <span class="vdesc">an operator edited two rules</span>
+            </button>
+            <code class="vhash" id="variant-hash"></code>
+          </div>
+          <div class="tamper" id="tamper-note">
+            <span class="tt">What the operator changed</span>
+            <ul id="tamper-edits"></ul>
+            <span class="mut">Everything else in the bundle is byte-identical &mdash; and the hash still moves.</span>
+          </div>
+        </div>
+
         <div class="runbar">
           <button id="run" class="primary">Run assessment</button>
           <span id="run-hint" class="mut">Pick an obligor, then run.</span>
