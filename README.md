@@ -1,21 +1,21 @@
 # agentrust-io demos
 
-Runnable demos for [cMCP](https://github.com/agentrust-io/cmcp) and [TRACE](https://github.com/agentrust-io/trace-spec). Five demos, ~6 minutes total.
+Runnable demos for [cMCP](https://github.com/agentrust-io/cmcp), [TRACE](https://github.com/agentrust-io/trace-spec), and [WCM](https://pypi.org/project/weight-custody-manifest/). Six demos, ~7 minutes total.
 
 ---
 
 ## Prerequisites
 
 ```
-pip install cmcp-runtime
+pip install cmcp-runtime weight-custody-manifest
 ```
 
-`cmcp-runtime` includes all dependencies (`starlette`, `uvicorn`, `cmcp-verify`). All demos use `CMCP_DEV_MODE=1` (software-only TEE, no hardware required). The local MCP server performs real filesystem operations on `./workspace/`.
+`cmcp-runtime` includes all dependencies (`starlette`, `uvicorn`, `cmcp-verify`) and drives demos 1 through 5; `weight-custody-manifest` (from PyPI) drives demo 6. All demos use `CMCP_DEV_MODE=1` (software-only TEE, no hardware required). The local MCP server performs real filesystem operations on `./workspace/`.
 
 ## Quick start: one command
 
 ```
-python demo.py            # run all three demos, pausing before each (good for live talks)
+python demo.py            # run all demos, pausing before each (good for live talks)
 python demo.py --no-pause # run straight through
 python demo.py 2          # run only demo 2
 ```
@@ -141,6 +141,23 @@ What you see:
 
 ---
 
+## Demo 6 -- Weight custody (~60 seconds)
+
+Demos 1-5 govern what an agent *does*. Demo 6 is the layer beneath: the model *weights* themselves. A Weight Custody Manifest binds the exact weight hash, gates the decryption key behind attestation, and carries the fine-tune's lineage. It needs no hardware and no server, and depends only on the `weight-custody-manifest` package from PyPI.
+
+```
+python demo-06-weight-custody/run.py
+```
+
+What you see:
+- a manifest jointly signed (builder + custodian) binds the checkpoint's exact `weights_hash`, and the signature verifies
+- the attestation gate releases the key only for the certified serving stack (genuine nonce, approved platform, signed image measurement)
+- a tampered checkpoint's hash does not match the manifest, so it is **refused before it ever loads**
+- a fine-tune is a derivative whose lineage verifies back to the signed base (the derivative is the real IP)
+- honest scope: this is accountability-grade against an operator who physically owns the silicon (see TEE.fail), not silicon-proof custody
+
+---
+
 ## Structure
 
 ```
@@ -179,12 +196,14 @@ demos/
 |   +-- run.py                  # Cross-platform launcher (use this)
 |   +-- run.sh                  # bash-only launcher
 +-- demo-05-compliance-domain/
-    +-- cmcp-config.yaml
-    +-- catalog.json            # Tags tools with compliance_domain + BAA status
-    +-- policies/               # Cedar: forbid any tool when context.baa_covered == false
-    +-- call.py                 # Two BAA-covered tools allowed, one non-covered tool denied
-    +-- run.py                  # Cross-platform launcher (use this)
-    +-- run.sh                  # bash-only launcher
+|   +-- cmcp-config.yaml
+|   +-- catalog.json            # Tags tools with compliance_domain + BAA status
+|   +-- policies/               # Cedar: forbid any tool when context.baa_covered == false
+|   +-- call.py                 # Two BAA-covered tools allowed, one non-covered tool denied
+|   +-- run.py                  # Cross-platform launcher (use this)
+|   +-- run.sh                  # bash-only launcher
++-- demo-06-weight-custody/
+    +-- run.py                  # WCM flow: sign, attestation gate, tamper refusal, lineage
 ```
 
 ---
