@@ -1,6 +1,6 @@
 # agentrust-io demos
 
-Runnable demos for [cMCP](https://github.com/agentrust-io/cmcp), [TRACE](https://github.com/agentrust-io/trace-spec), and [WCM](https://pypi.org/project/weight-custody-manifest/). Six demos, ~7 minutes total.
+Runnable demos for [cMCP](https://github.com/agentrust-io/cmcp), [TRACE](https://github.com/agentrust-io/trace-spec), and [WCM](https://pypi.org/project/weight-custody-manifest/). Nine demos, ~10 minutes total.
 
 ---
 
@@ -10,7 +10,7 @@ Runnable demos for [cMCP](https://github.com/agentrust-io/cmcp), [TRACE](https:/
 pip install cmcp-runtime weight-custody-manifest
 ```
 
-`cmcp-runtime` includes all dependencies (`starlette`, `uvicorn`, `cmcp-verify`) and drives demos 1 through 5; `weight-custody-manifest` (from PyPI) drives demo 6. All demos use `CMCP_DEV_MODE=1` (software-only TEE, no hardware required). The local MCP server performs real filesystem operations on `./workspace/`.
+`cmcp-runtime` includes all dependencies (`starlette`, `uvicorn`, `cmcp-verify`) and drives demos 1 through 5; `weight-custody-manifest` (from PyPI) drives demos 6 through 9. All demos use `CMCP_DEV_MODE=1` (software-only TEE, no hardware required). The local MCP server performs real filesystem operations on `./workspace/`.
 
 ## Quick start: one command
 
@@ -158,6 +158,54 @@ What you see:
 
 ---
 
+## Demo 7 -- Closed-weight custody (~60 seconds)
+
+The mirror of demo 6. There the base was an open-weight model, so the machinery did integrity, license, and derivative custody. Here the model is **closed** (a frontier lab shipping weights into a customer's or sovereign's own enclave), so the base weights *are* the secret and the job is to keep the decryption key off the operator.
+
+```
+python demo-07-closed-weight/run.py
+```
+
+What you see:
+- a manifest with `base_confidentiality: confidential`, jointly signed by the lab and the customer
+- the decryption key releases only into the attested, lab-signed serving stack
+- an unapproved serving stack (one that could export plaintext weights) is refused the key
+- the closed-vs-open contrast spelled out: same protocol, different job
+
+---
+
+## Demo 8 -- Derivative lineage (~60 seconds)
+
+When a customer fine-tunes inside the enclave on private data, the result is novel IP that never existed publicly. WCM gives the derivative its own signed manifest with a `derived_from` pointer and a `rights_holder` split, so its chain of custody resolves back to the base.
+
+```
+python demo-08-derivative-lineage/run.py
+```
+
+What you see:
+- a base manifest permitting `fine-tune-only`, and a derivative that permits `none`
+- `verify_lineage` resolving the derivative back to the base (chain, depth, root)
+- the derivative's `rights_holder` recording the base/derivative IP split
+- monotone rights: a fork of the no-derivatives derivative is **rejected**, the base's terms travel down the chain
+
+---
+
+## Demo 9 -- Sovereign threshold (~90 seconds)
+
+For a sovereign deployment the honest limit bites hardest: a hardware owner who forges one attestation could release a key. The answer is to never let one release be enough. The model key is split **2-of-3** across independent parties, each releasing its share only against its own attestation.
+
+```
+python demo-09-sovereign-threshold/run.py
+```
+
+What you see:
+- the model key split 2-of-3 across the lab, the sovereign authority, and the customer
+- a single share reconstructs nothing (one forged attestation is below threshold)
+- two independent shareholders each attest and release their share
+- the quorum reconstructs the key, so forging it requires forging attestation to a quorum of independent roots, not one
+
+---
+
 ## Structure
 
 ```
@@ -203,7 +251,13 @@ demos/
 |   +-- run.py                  # Cross-platform launcher (use this)
 |   +-- run.sh                  # bash-only launcher
 +-- demo-06-weight-custody/
-    +-- run.py                  # WCM flow: sign, attestation gate, tamper refusal, lineage
+|   +-- run.py                  # WCM flow: sign, attestation gate, tamper refusal, lineage
++-- demo-07-closed-weight/
+|   +-- run.py                  # Closed-weight secrecy: key releases only into the attested stack
++-- demo-08-derivative-lineage/
+|   +-- run.py                  # The fine-tune is the IP: derived_from + rights split + lineage
++-- demo-09-sovereign-threshold/
+    +-- run.py                  # 2-of-3 threshold split, each share released against attestation
 ```
 
 ---
