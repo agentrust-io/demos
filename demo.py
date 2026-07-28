@@ -3,7 +3,7 @@
 
     python demo.py              # run all, pausing before each (for live talks)
     python demo.py --no-pause   # run straight through, no prompts
-    python demo.py 2            # run only demo 2 (1 through 6)
+    python demo.py 2            # run only demo 2 (1 through 9)
 
 The trust chain, end to end:
     Demo 1  cMCP enforces Cedar on every tool call and signs a TRACE claim.
@@ -17,6 +17,9 @@ Then, on a second axis, three ways the policy decides a call:
 And the layer beneath it all, the weights themselves:
     Demo 6  Weight custody -- a signed manifest binds the exact weight hash; a tampered
             checkpoint is refused before load, and a fine-tune's lineage verifies to the base.
+    Demo 7  Closed-weight custody -- the frontier case where secrecy is the job.
+    Demo 8  Derivative lineage -- the fine-tune is the real IP; its chain resolves to the base.
+    Demo 9  Sovereign threshold -- split the key 2-of-3 so no single release is enough.
 
 All demos run in software-only mode (CMCP_DEV_MODE=1). That is deliberate: software
 proves the whole chain except the hardware root, so verification reads
@@ -57,6 +60,21 @@ DEMOS = [
      "A checkpoint signed to its exact weight hash. Attestation gates the key, a\n"
      "  tampered fork is refused before load, and a fine-tune's lineage verifies back to\n"
      "  the signed base. Possession is not provenance."),
+    ("7", "Closed-weight custody",
+     "demo-07-closed-weight/run.py",
+     "The frontier case where secrecy is the job: closed weights, the key releases only\n"
+     "  into the attested lab-signed enclave, and an unapproved serving stack gets\n"
+     "  nothing. The mirror of demo 6's open-weight framing."),
+    ("8", "Derivative lineage",
+     "demo-08-derivative-lineage/run.py",
+     "The fine-tune is the real IP. A derivative gets its own manifest with derived_from\n"
+     "  and a rights split; lineage resolves it to the base, and the base's terms travel\n"
+     "  down the chain (a fork of a no-derivatives model is rejected)."),
+    ("9", "Sovereign threshold",
+     "demo-09-sovereign-threshold/run.py",
+     "The model key is split 2-of-3 across independent parties, each releasing its share\n"
+     "  only against attestation. A quorum reconstructs; one forged root is below\n"
+     "  threshold, which is why threshold is a prerequisite for sovereign self-custody."),
 ]
 
 GREEN = "\033[92m"; BLUE = "\033[96m"; DIM = "\033[90m"; BOLD = "\033[1m"; RST = "\033[0m"
@@ -156,7 +174,7 @@ def run(idx, title, script, blurb, pause):
 
 def main():
     ap = argparse.ArgumentParser(description="Run the agentrust-io trust-chain demos.")
-    ap.add_argument("only", nargs="?", choices=["1", "2", "3", "4", "5", "6"], help="run only this demo")
+    ap.add_argument("only", nargs="?", choices=["1", "2", "3", "4", "5", "6", "7", "8", "9"], help="run only this demo")
     ap.add_argument("--no-pause", action="store_true", help="run straight through, no prompts")
     args = ap.parse_args()
 
