@@ -8,6 +8,7 @@ import json
 import os
 import pathlib
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -39,6 +40,24 @@ def _find_cmcp() -> str:
             if p.exists():
                 return str(p)
     sys.exit("cmcp not found. Run: pip install cmcp-runtime")
+
+
+def _wait_for_port(port: int, what: str, timeout: float = 60.0) -> None:
+    """Block until something is listening on 127.0.0.1:port.
+
+    A fixed sleep used to be enough; cMCP Runtime now does attestation and audit
+    setup before it binds, so the demo raced startup and failed on a refused
+    connection.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=1):
+                return
+        except OSError:
+            time.sleep(0.25)
+    sys.exit(f"{what} did not start listening on :{port} within {timeout:.0f}s. "
+             "See the *.log files in this demo folder.")
 
 
 def _post(url: str, payload: dict, token: str) -> dict:
@@ -99,7 +118,7 @@ def main() -> None:
             [sys.executable, str(REPO_ROOT / "server" / "server.py")],
             stdout=server_log, stderr=server_log,
         )
-        time.sleep(1)
+        _wait_for_port(9001, "MCP filesystem server")
 
         env = os.environ.copy()
         env["CMCP_DEV_MODE"] = "1"
@@ -108,7 +127,7 @@ def main() -> None:
             stdout=cmcp_log, stderr=cmcp_log,
             cwd=SCRIPT_DIR, env=env,
         )
-        time.sleep(2)
+        _wait_for_port(8443, "cMCP Runtime")
 
         # Step 3: write_file denied
         print()
