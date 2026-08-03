@@ -1,2 +1,2 @@
 cmcp-runtime
-weight-custody-manifest>=0.22.1
+weight-custody-manifest>=0.23.0
