@@ -18,6 +18,7 @@ Then it opens http://localhost:8000. Ctrl+C stops everything.
 import os
 import pathlib
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -44,6 +45,24 @@ def _find_cmcp() -> str:
             if (scripts / name).exists():
                 return str(scripts / name)
     sys.exit("cmcp not found. Run: pip install cmcp-runtime httpx")
+
+
+def _wait_for_port(port: int, what: str, timeout: float = 60.0) -> None:
+    """Block until something is listening on 127.0.0.1:port.
+
+    A fixed sleep used to be enough; cMCP Runtime now does attestation and audit
+    setup before it binds, so the console raced startup and the first assessment
+    failed on a refused connection.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=1):
+                return
+        except OSError:
+            time.sleep(0.25)
+    sys.exit(f"{what} did not start listening on :{port} within {timeout:.0f}s. "
+             "See server.log and cmcp.log in this folder.")
 
 
 def _ensure_submodule() -> None:
@@ -83,7 +102,7 @@ def main() -> None:
         procs.append(subprocess.Popen(
             [sys.executable, str(EXAMPLE / "server" / "mock_mcp_server.py")],
             stdout=server_log, stderr=server_log))
-        time.sleep(1)
+        _wait_for_port(8080, "EU credit-risk MCP server")
 
         print("-- cMCP gateway on :8443 (CMCP_DEV_MODE=1)", flush=True)
         env = os.environ.copy()
@@ -91,12 +110,12 @@ def main() -> None:
         procs.append(subprocess.Popen(
             [_find_cmcp(), "start", "--config", str(GATEWAY_CFG)],
             stdout=cmcp_log, stderr=cmcp_log, env=env))
-        time.sleep(2)
+        _wait_for_port(8443, "cMCP gateway")
 
         print(f"-- web console on http://localhost:{PORT}", flush=True)
         web = subprocess.Popen([sys.executable, str(HERE / "webserver.py")], env=os.environ.copy())
         procs.append(web)
-        time.sleep(1)
+        _wait_for_port(int(PORT), "web console")
 
         url = f"http://localhost:{PORT}"
         print(f"\nOpen {url} (opening it for you now). Ctrl+C to stop.\n", flush=True)
