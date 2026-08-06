@@ -23,8 +23,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install cmcp-runtime
-        run: pip install cmcp-runtime
+      # requirements.txt is the single source of truth: it already pins both
+      # cmcp-runtime (demos 1-5) and weight-custody-manifest (demos 6-9).
+      # Installing cmcp-runtime alone silently left the WCM demos unrunnable.
+      - name: Install demo dependencies
+        run: pip install -r requirements.txt
 
       # Run in order: demo-01 produces workspace/trace-claim.json, which
       # demo-02 and demo-03 consume.
@@ -36,3 +39,17 @@ jobs:
 
       - name: Demo 3 - offline TRACE verification
         run: python demo-03-offline-trace/run.py
+
+      - name: Demo 4 - context-aware enforcement
+        run: python demo-04-context-enforcement/run.py
+
+      - name: Demo 5 - attribute-based enforcement (BAA coverage)
+        run: python demo-05-compliance-domain/run.py
+
+      # Demos 6-9 are offline: no gateway, no ports, no MCP server.
+      - name: Demos 6-9 - weight custody
+        run: |
+          for d in demo-06-weight-custody demo-07-closed-weight                    demo-08-derivative-lineage demo-09-sovereign-threshold; do
+            echo "== $d =="
+            python "$d/run.py"
+          done

@@ -74,7 +74,45 @@ def _post(url: str, payload: dict, token: str) -> dict:
         return json.loads(exc.read())
 
 
+def _assert_port_free(port: int, what: str) -> None:
+    """Refuse to start if something already owns the port.
+
+    _wait_for_port() returns as soon as *anything* answers, so a gateway left
+    running by an earlier demo satisfies it instantly. Every call then goes to
+    that gateway and is decided by its policy bundle, not this demo's. The
+    verdicts still look plausible, which is what makes it dangerous: the demo
+    prints allow/deny lines that are simply wrong, with no error anywhere.
+    """
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=1):
+            pass
+    except OSError:
+        return
+    sys.exit(
+        f"Port {port} is already in use, so {what} cannot start and this demo "
+        f"would be scored against whatever is already listening. Stop it first "
+        f"(a cMCP gateway left over from another demo is the usual cause), then "
+        f"re-run."
+    )
+
+
+def _wait_for_port_release(port: int, timeout: float = 10.0) -> None:
+    """Block until the port is actually free, so the next demo starts clean."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=1):
+                time.sleep(0.25)
+        except OSError:
+            return
+    print(f"warning: port {port} still held after teardown", file=sys.stderr)
+
+
 def main() -> None:
+    # Before anything starts: both ports must be ours.
+    _assert_port_free(9001, "the MCP filesystem server")
+    _assert_port_free(8443, "the cMCP Runtime")
+
     if not CLAIM_PATH.exists():
         sys.exit("Run demo-01 first to produce a TRACE claim:\n  python demo-01-cmcp-in-action/run.py")
 
@@ -182,6 +220,8 @@ def main() -> None:
                     proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     proc.kill()
+        _wait_for_port_release(8443)
+        _wait_for_port_release(9001)
         server_log.close()
         cmcp_log.close()
 
