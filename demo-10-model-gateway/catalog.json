@@ -1,0 +1,38 @@
+[
+  {
+    "tool_name": "model.chat_completion",
+    "server": {
+      "display_name": "Model backend",
+      "url": "http://localhost:9010/mcp",
+      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "transport": "http-sse",
+      "rotation_mode": "key-pinned"
+    },
+    "approved_definition": {
+      "description": "Run a chat completion against a model in the catalog",
+      "input_schema": {
+        "type": "object",
+        "required": ["model", "prompt"],
+        "properties": {
+          "model": { "type": "string" },
+          "prompt": { "type": "string" },
+          "model_region": { "type": "string" },
+          "model_cloud": { "type": "string" },
+          "data_class": { "type": "string" },
+          "contains_identifiers": { "type": "boolean" },
+          "redacted": { "type": "boolean" },
+          "redaction_count": { "type": "number" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": { "result": { "type": "string" } }
+      }
+    },
+    "compliance_domain": "internal",
+    "requires_baa": false,
+    "sensitivity_level": "confidential",
+    "added_at": "2026-08-06T00:00:00Z",
+    "approved_by": "demo-setup"
+  }
+]
