@@ -75,6 +75,12 @@ DEMOS = [
      "The model key is split 2-of-3 across independent parties, each releasing its share\n"
      "  only against attestation. A quorum reconstructs; one forged root is below\n"
      "  threshold, which is why threshold is a prerequisite for sovereign self-custody."),
+    ("10", "Governed model calls",
+     "demo-10-model-gateway/run.py",
+     "The other demos govern tool calls; this one governs model calls. An\n"
+     "  OpenAI-compatible endpoint routes by data class: PII leaves only once\n"
+     "  identifiers are stripped, confidential stays in region, and PHI also\n"
+     "  stays off shared infrastructure."),
 ]
 
 GREEN = "\033[92m"; BLUE = "\033[96m"; DIM = "\033[90m"; BOLD = "\033[1m"; RST = "\033[0m"
@@ -174,7 +180,7 @@ def run(idx, title, script, blurb, pause):
 
 def main():
     ap = argparse.ArgumentParser(description="Run the agentrust-io trust-chain demos.")
-    ap.add_argument("only", nargs="?", choices=["1", "2", "3", "4", "5", "6", "7", "8", "9"], help="run only this demo")
+    ap.add_argument("only", nargs="?", choices=[d[0] for d in DEMOS], help="run only this demo")
     ap.add_argument("--no-pause", action="store_true", help="run straight through, no prompts")
     args = ap.parse_args()
 

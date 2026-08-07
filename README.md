@@ -206,6 +206,26 @@ What you see:
 
 ---
 
+## Demo 10 -- Governed model calls (~90 seconds)
+
+The other nine demos govern **tool** calls. This one governs **model** calls, a different
+question: not whether an agent may use a tool, but whether this class of data may reach
+that model, in that region, on that infrastructure. The caller changes one line,
+`base_url`, and keeps its existing OpenAI client.
+
+```
+python demo-10-model-gateway/run.py
+```
+
+What you see:
+- `public` data reaching an out-of-region model, allowed and recorded
+- `pii` allowed out of region **only after** identifiers are stripped at the boundary
+- `confidential` refused out of region: proof makes a call provable, not permissible
+- `hipaa_phi` refused in region on **shared** infrastructure and allowed on **dedicated** -- same prompt, same class, so jurisdiction is necessary but not sufficient
+- the session closing into a signed TRACE claim, verifiable offline
+
+---
+
 ## Structure
 
 ```
