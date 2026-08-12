@@ -47,7 +47,7 @@ def _find_cmcp() -> str:
     sys.exit("cmcp not found. Run: pip install cmcp-runtime httpx")
 
 
-def _wait_for_port(port: int, what: str, timeout: float = 60.0) -> None:
+def _wait_for_port(port: int, what: str, process=None, timeout: float = 60.0) -> None:
     """Block until something is listening on 127.0.0.1:port.
 
     A fixed sleep used to be enough; cMCP Runtime now does attestation and audit
@@ -56,6 +56,9 @@ def _wait_for_port(port: int, what: str, timeout: float = 60.0) -> None:
     """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
+        if process is not None and process.poll() is not None:
+            sys.exit(f"{what} exited with code {process.returncode} before listening on :{port}. "
+                     "See server.log and cmcp.log in this folder.")
         try:
             with socket.create_connection(("127.0.0.1", port), timeout=1):
                 return
@@ -102,7 +105,7 @@ def main() -> None:
         procs.append(subprocess.Popen(
             [sys.executable, str(EXAMPLE / "server" / "mock_mcp_server.py")],
             stdout=server_log, stderr=server_log))
-        _wait_for_port(8080, "EU credit-risk MCP server")
+        _wait_for_port(8080, "EU credit-risk MCP server", procs[-1])
 
         print("-- cMCP gateway on :8443 (CMCP_DEV_MODE=1)", flush=True)
         env = os.environ.copy()
@@ -110,12 +113,12 @@ def main() -> None:
         procs.append(subprocess.Popen(
             [_find_cmcp(), "start", "--config", str(GATEWAY_CFG)],
             stdout=cmcp_log, stderr=cmcp_log, env=env))
-        _wait_for_port(8443, "cMCP gateway")
+        _wait_for_port(8443, "cMCP gateway", procs[-1])
 
         print(f"-- web console on http://localhost:{PORT}", flush=True)
         web = subprocess.Popen([sys.executable, str(HERE / "webserver.py")], env=os.environ.copy())
         procs.append(web)
-        _wait_for_port(int(PORT), "web console")
+        _wait_for_port(int(PORT), "web console", web)
 
         url = f"http://localhost:{PORT}"
         print(f"\nOpen {url} (opening it for you now). Ctrl+C to stop.\n", flush=True)

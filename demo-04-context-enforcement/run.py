@@ -36,7 +36,7 @@ def _find_cmcp() -> str:
     sys.exit("cmcp not found. Run: pip install cmcp-runtime")
 
 
-def _wait_for_port(port: int, what: str, timeout: float = 60.0) -> None:
+def _wait_for_port(port: int, what: str, process=None, timeout: float = 60.0) -> None:
     """Block until something is listening on 127.0.0.1:port.
 
     A fixed sleep used to be enough; cMCP Runtime now does attestation and audit
@@ -45,6 +45,9 @@ def _wait_for_port(port: int, what: str, timeout: float = 60.0) -> None:
     """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
+        if process is not None and process.poll() is not None:
+            sys.exit(f"{what} exited with code {process.returncode} before listening on :{port}. "
+                     "See the *.log files in this demo folder.")
         try:
             with socket.create_connection(("127.0.0.1", port), timeout=1):
                 return
@@ -106,7 +109,7 @@ def main() -> None:
             [sys.executable, str(REPO_ROOT / "server" / "server.py")],
             stdout=server_log, stderr=server_log,
         )
-        _wait_for_port(9001, "MCP filesystem server")
+        _wait_for_port(9001, "MCP filesystem server", server)
 
         print("-- Starting cMCP Runtime (CMCP_DEV_MODE=1) on :8443 --", flush=True)
         env = os.environ.copy()
@@ -116,7 +119,7 @@ def main() -> None:
             stdout=cmcp_log, stderr=cmcp_log,
             cwd=SCRIPT_DIR, env=env,
         )
-        _wait_for_port(8443, "cMCP Runtime")
+        _wait_for_port(8443, "cMCP Runtime", cmcp_proc)
 
         print()
         subprocess.run([sys.executable, str(SCRIPT_DIR / "call.py")], check=True)
