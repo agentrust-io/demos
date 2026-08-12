@@ -172,7 +172,13 @@ def run(idx, title, script, blurb, pause):
         except (EOFError, KeyboardInterrupt):
             print("\nStopped."); sys.exit(0)
     banner(idx, title, blurb)
-    rc = subprocess.run([sys.executable, str(ROOT / script)]).returncode
+    try:
+        rc = subprocess.run(
+            [sys.executable, str(ROOT / script)], timeout=180
+        ).returncode
+    except subprocess.TimeoutExpired:
+        print(_c(f"\n[!] Demo {idx} timed out after 180 seconds.", BOLD))
+        return 1
     if rc != 0:
         print(_c(f"\n[!] Demo {idx} exited with code {rc}. See the *.log files in the demo folder.", BOLD))
     return rc

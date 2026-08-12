@@ -18,9 +18,13 @@ HERE = pathlib.Path(__file__).parent
 PORTS = {"model backend": 9010, "model gateway": 8444, "endpoint": 8500}
 
 
-def _wait(port, name, timeout=60):
+def _wait(port, name, process=None, timeout=60):
     deadline = time.time() + timeout
     while time.time() < deadline:
+        if process is not None and process.poll() is not None:
+            print(f"{name} exited with code {process.returncode} before listening on :{port}. "
+                  "See the *.log files.", file=sys.stderr)
+            return False
         with socket.socket() as s:
             s.settimeout(0.5)
             if s.connect_ex(("127.0.0.1", port)) == 0:
@@ -66,21 +70,21 @@ def main():
         procs.append(subprocess.Popen(
             [sys.executable, str(HERE / "model_server.py")],
             stdout=logs["model backend"], stderr=logs["model backend"], env=env, cwd=HERE))
-        if not _wait(9010, "model backend"):
+        if not _wait(9010, "model backend", procs[-1]):
             return 1
 
         print("-- cMCP gateway on :8444  (CMCP_DEV_MODE=1)")
         procs.append(subprocess.Popen(
             [cmcp, "start", "--config", config],
             stdout=logs["model gateway"], stderr=logs["model gateway"], env=env, cwd=HERE))
-        if not _wait(8444, "model gateway"):
+        if not _wait(8444, "model gateway", procs[-1]):
             return 1
 
         print("-- OpenAI-compatible endpoint on :8500")
         procs.append(subprocess.Popen(
             [sys.executable, str(HERE / "endpoint.py")],
             stdout=logs["endpoint"], stderr=logs["endpoint"], env=env, cwd=HERE))
-        if not _wait(8500, "endpoint"):
+        if not _wait(8500, "endpoint", procs[-1]):
             return 1
 
         print()
