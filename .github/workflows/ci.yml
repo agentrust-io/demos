@@ -53,3 +53,6 @@ jobs:
             echo "== $d =="
             python "$d/run.py"
           done
+
+      - name: Demo 10 - governed model calls
+        run: python demo-10-model-gateway/run.py
