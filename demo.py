@@ -3,7 +3,7 @@
 
     python demo.py              # run all, pausing before each (for live talks)
     python demo.py --no-pause   # run straight through, no prompts
-    python demo.py 2            # run only demo 2 (1 through 9)
+    python demo.py 2            # run only demo 2 (1 through 10)
 
 The trust chain, end to end:
     Demo 1  cMCP enforces Cedar on every tool call and signs a TRACE claim.
