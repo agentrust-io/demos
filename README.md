@@ -1,16 +1,16 @@
 # agentrust-io demos
 
-Runnable demos for [cMCP](https://github.com/agentrust-io/cmcp), [TRACE](https://github.com/agentrust-io/trace-spec), and [WCM](https://pypi.org/project/weight-custody-manifest/). Nine demos, ~10 minutes total.
+Runnable demos for [cMCP](https://github.com/agentrust-io/cmcp), [TRACE](https://github.com/agentrust-io/trace-spec), and [WCM](https://pypi.org/project/weight-custody-manifest/). Ten demos, ~12 minutes total.
 
 ---
 
 ## Prerequisites
 
 ```
-pip install cmcp-runtime weight-custody-manifest
+pip install -r requirements.txt
 ```
 
-`cmcp-runtime` includes all dependencies (`starlette`, `uvicorn`, `cmcp-verify`) and drives demos 1 through 5; `weight-custody-manifest` (from PyPI) drives demos 6 through 9. All demos use `CMCP_DEV_MODE=1` (software-only TEE, no hardware required). The local MCP server performs real filesystem operations on `./workspace/`.
+The requirements install cMCP for demos 1 through 5, Weight Custody Manifest for demos 6 through 9, and the OpenAI client used by demo 10. All demos use `CMCP_DEV_MODE=1` (software-only TEE, no hardware required). The local MCP server performs real filesystem operations on `./workspace/`.
 
 ## Quick start: one command
 
