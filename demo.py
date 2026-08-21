@@ -10,7 +10,7 @@ The trust chain, end to end:
     Demo 2  Swap the policy bundle and the claim's hash changes; a pinned verifier rejects it.
     Demo 3  Verify that signed claim offline: no server, no gateway, no network.
 
-Then, on a second axis, three ways the policy decides a call:
+Then, on a second axis, two ways the policy decides a call:
     Demo 4  by call context   -- the same tool, allowed in one workflow, denied in another.
     Demo 5  by tool attribute -- a non-BAA-covered tool refused by one guardrail rule.
 
@@ -20,6 +20,10 @@ And the layer beneath it all, the weights themselves:
     Demo 7  Closed-weight custody -- the frontier case where secrecy is the job.
     Demo 8  Derivative lineage -- the fine-tune is the real IP; its chain resolves to the base.
     Demo 9  Sovereign threshold -- split the key 2-of-3 so no single release is enough.
+
+And one axis out from the tool boundary:
+    Demo 10 Governed model calls -- the same policy boundary on an OpenAI-compatible
+            endpoint, routing each request by its data class.
 
 All demos run in software-only mode (CMCP_DEV_MODE=1). That is deliberate: software
 proves the whole chain except the hardware root, so verification reads
