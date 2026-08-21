@@ -36,6 +36,25 @@ def _find_cmcp() -> str:
     sys.exit("cmcp not found. Run: pip install cmcp-runtime")
 
 
+
+def _log_tail(what: str, lines: int = 15) -> str:
+    """Return the tail of the log for `what`, or "" if there is nothing to show.
+
+    A service that fails to bind has already written the reason to its log. The
+    launcher used to point at the file and leave; printing the tail turns a 60
+    second wait plus a scavenger hunt into the actual error.
+    """
+    name = "cmcp.log" if "cMCP" in what or "cmcp" in what else "server.log"
+    path = pathlib.Path(__file__).parent.resolve() / name
+    try:
+        tail = path.read_text(encoding="utf-8", errors="replace").splitlines()[-lines:]
+    except OSError:
+        return ""
+    if not tail:
+        return ""
+    body = "\n".join("    " + line for line in tail)
+    return f"\n\nLast {len(tail)} lines of {name}:\n{body}"
+
 def _wait_for_port(port: int, what: str, process=None, timeout: float = 60.0) -> None:
     """Block until something is listening on 127.0.0.1:port.
 
@@ -46,15 +65,15 @@ def _wait_for_port(port: int, what: str, process=None, timeout: float = 60.0) ->
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if process is not None and process.poll() is not None:
-            sys.exit(f"{what} exited with code {process.returncode} before listening on :{port}. "
-                     "See the *.log files in this demo folder.")
+            sys.exit(f"{what} exited with code {process.returncode} before listening on :{port}."
+                     + _log_tail(what))
         try:
             with socket.create_connection(("127.0.0.1", port), timeout=1):
                 return
         except OSError:
             time.sleep(0.25)
-    sys.exit(f"{what} did not start listening on :{port} within {timeout:.0f}s. "
-             "See the *.log files in this demo folder.")
+    sys.exit(f"{what} did not start listening on :{port} within {timeout:.0f}s."
+             + _log_tail(what))
 
 
 def _assert_port_free(port: int, what: str) -> None:
