@@ -237,7 +237,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def _serve(self, rel):
         root = WEB.resolve()
-        target = (root / rel).resolve()
+        requested = pathlib.PurePosixPath(str(rel))
+        if requested.is_absolute() or ".." in requested.parts:
+            return self._send(404, "not found", "text/plain")
+        target = (root / pathlib.Path(*requested.parts)).resolve()
         if not target.is_relative_to(root) or not target.is_file():
             return self._send(404, "not found", "text/plain")
         self._send(200, target.read_bytes(), _CT.get(target.suffix, "application/octet-stream"))
