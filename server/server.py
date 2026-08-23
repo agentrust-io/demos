@@ -24,8 +24,9 @@ WORKSPACE.mkdir(exist_ok=True)
 
 
 def _resolve(path: str) -> pathlib.Path:
-    target = (WORKSPACE / path).resolve()
-    if not str(target).startswith(str(WORKSPACE.resolve())):
+    root = WORKSPACE.resolve()
+    target = (root / path).resolve()
+    if not target.is_relative_to(root):
         raise ValueError("path traversal not allowed")
     return target
 
