@@ -85,7 +85,8 @@ def test_web_console_gateway_env_drops_inherited_bearer_token():
 def test_web_console_tampered_gateway_env_drops_inherited_bearer_token():
     """Same requirement for the tampered second gateway (demo 2's policy-swap
     story inside the console) -- it shares the same tokenless config."""
-    policy_variants = _load("demo_web_console_policy_variants", "web-console/policy_variants.py")
+    policy_variants = _load(
+        "demo_web_console_policy_variants", "web-console/policy_variants.py")
     base_env = {"PATH": "/usr/bin", "CMCP_BEARER_TOKEN": "demo-token"}
 
     env = policy_variants.gateway_env(base_env)
