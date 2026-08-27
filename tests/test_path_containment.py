@@ -1,4 +1,5 @@
-"""Negative tests for sibling-prefix traversal in the demo servers."""
+"""Negative tests for sibling-prefix traversal in the demo servers, and for the
+web console's tokenless-gateway env handling."""
 
 from __future__ import annotations
 
@@ -63,3 +64,32 @@ def test_web_server_refuses_sibling_with_web_prefix(tmp_path, monkeypatch):
     handler._serve("../web-backup/secret.txt")
 
     assert response == {"status": 404, "body": "not found", "content_type": "text/plain"}
+
+
+def test_web_console_gateway_env_drops_inherited_bearer_token():
+    """The web console's gateway is tokenless (the vendored credit_risk_agent.py
+    never sends an Authorization header). If CMCP_BEARER_TOKEN is inherited
+    from the shell -- e.g. left set from the terminal demos' README step --
+    cmcp starts requiring it anyway and every /api/run call fails with
+    MISSING_BEARER_TOKEN. The gateway env must always drop it."""
+    run = _load("demo_web_console_run", "web-console/run.py")
+    base_env = {"PATH": "/usr/bin", "CMCP_BEARER_TOKEN": "demo-token"}
+
+    env = run._gateway_env(base_env)
+
+    assert "CMCP_BEARER_TOKEN" not in env
+    assert env["CMCP_DEV_MODE"] == "1"
+    assert env["PATH"] == "/usr/bin"
+
+
+def test_web_console_tampered_gateway_env_drops_inherited_bearer_token():
+    """Same requirement for the tampered second gateway (demo 2's policy-swap
+    story inside the console) -- it shares the same tokenless config."""
+    policy_variants = _load("demo_web_console_policy_variants", "web-console/policy_variants.py")
+    base_env = {"PATH": "/usr/bin", "CMCP_BEARER_TOKEN": "demo-token"}
+
+    env = policy_variants.gateway_env(base_env)
+
+    assert "CMCP_BEARER_TOKEN" not in env
+    assert env["CMCP_DEV_MODE"] == "1"
+    assert env["PATH"] == "/usr/bin"

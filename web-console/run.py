@@ -97,6 +97,20 @@ def _ensure_submodule() -> None:
         sys.exit("submodule missing. Run: git submodule update --init")
 
 
+def _gateway_env(base_env: dict) -> dict:
+    """Env for the approved gateway subprocess: software-only TEE, and no
+    inherited bearer token -- see the CMCP_BEARER_TOKEN.pop comment at the
+    call site for why."""
+    env = dict(base_env)
+    env["CMCP_DEV_MODE"] = "1" 
+    # loopback demo, tokenless: the vendored credit_risk_agent.py never sends
+    # an Authorization header. If CMCP_BEARER_TOKEN is inherited from the
+    # shell -- e.g. left set from the terminal demos' README step -- cmcp
+    # starts requiring it anyway and every /api/run call fails.
+    env.pop("CMCP_BEARER_TOKEN", None)
+    return env
+
+
 def _write_gateway_config() -> None:
     # A loopback config pointing at the submodule example's own policy and
     # catalog. We do not copy them -- we reference them where they live.
@@ -127,11 +141,9 @@ def main() -> None:
         _wait_for_port(8080, "EU credit-risk MCP server", procs[-1])
 
         print("-- cMCP gateway on :8443 (CMCP_DEV_MODE=1)", flush=True)
-        env = os.environ.copy()
-        env["CMCP_DEV_MODE"] = "1"
         procs.append(subprocess.Popen(
             [_find_cmcp(), "start", "--config", str(GATEWAY_CFG)],
-            stdout=cmcp_log, stderr=cmcp_log, env=env))
+            stdout=cmcp_log, stderr=cmcp_log, env=_gateway_env(os.environ)))
         _wait_for_port(8443, "cMCP gateway", procs[-1])
 
         print(f"-- web console on http://localhost:{PORT}", flush=True)
