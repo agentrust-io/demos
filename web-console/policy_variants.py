@@ -94,6 +94,17 @@ def build_tampered() -> tuple[pathlib.Path, list[str]]:
     return TAMPERED_DIR, applied
 
 
+def gateway_env(base_env: dict) -> dict:
+    """Env for a gateway subprocess: software-only TEE, and no inherited
+    bearer token. Same tokenless loopback config as web-console/run.py's
+    approved gateway -- an inherited CMCP_BEARER_TOKEN (e.g. left set from the
+    terminal demos) would make cmcp require auth the agent never sends."""
+    env = dict(base_env)
+    env["CMCP_DEV_MODE"] = "1"
+    env.pop("CMCP_BEARER_TOKEN", None)
+    return env
+
+
 def write_config(policy_dir: pathlib.Path, port: int, audit_name: str) -> pathlib.Path:
     WORKSPACE.mkdir(exist_ok=True)
     cfg = WORKSPACE / f"fs-gateway-{audit_name}.yaml"
@@ -139,11 +150,9 @@ class TamperedGateway:
         policy_dir, self.applied = build_tampered()
         cfg = write_config(policy_dir, TAMPERED_PORT, "tampered")
         self.log = open(HERE / "cmcp-tampered.log", "w")
-        run_env = dict(env)
-        run_env["CMCP_DEV_MODE"] = "1"
         self.proc = subprocess.Popen(
             [_find_cmcp(), "start", "--config", str(cfg)],
-            stdout=self.log, stderr=self.log, env=run_env,
+            stdout=self.log, stderr=self.log, env=gateway_env(env),
         )
         # the gateway measures the bundle before it binds; give it a moment
         for _ in range(40):
