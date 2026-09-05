@@ -4,9 +4,8 @@
     "server": {
       "display_name": "Demo Filesystem MCP Server",
       "url": "http://localhost:9001/mcp",
-      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-      "transport": "http-sse",
-      "rotation_mode": "key-pinned"
+      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "transport": "http-sse"
     },
     "approved_definition": {
       "description": "Write content to a file in the demo workspace",
@@ -34,6 +33,7 @@
         }
       }
     },
+    "definition_hash": "sha256:7b4738feb4a0c18b2870276996a14d8c2241380c063815cb98b54cb200e7e0d2",
     "compliance_domain": "finance",
     "requires_baa": false,
     "sensitivity_level": "confidential",
@@ -45,9 +45,8 @@
     "server": {
       "display_name": "Demo Filesystem MCP Server",
       "url": "http://localhost:9001/mcp",
-      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-      "transport": "http-sse",
-      "rotation_mode": "key-pinned"
+      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "transport": "http-sse"
     },
     "approved_definition": {
       "description": "Read a file from the demo workspace",
@@ -71,6 +70,7 @@
         }
       }
     },
+    "definition_hash": "sha256:3bdb3d438df2208aa5b293e0d71260f808365d6fcef4a9cf44702ebed1acc6cc",
     "compliance_domain": "finance",
     "requires_baa": false,
     "sensitivity_level": "confidential",

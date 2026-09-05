@@ -4,31 +4,54 @@
     "server": {
       "display_name": "Model backend",
       "url": "http://localhost:9010/mcp",
-      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-      "transport": "http-sse",
-      "rotation_mode": "key-pinned"
+      "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "transport": "http-sse"
     },
     "approved_definition": {
       "description": "Run a chat completion against a model in the catalog",
       "input_schema": {
         "type": "object",
-        "required": ["model", "prompt"],
+        "required": [
+          "model",
+          "prompt"
+        ],
         "properties": {
-          "model": { "type": "string" },
-          "prompt": { "type": "string" },
-          "model_region": { "type": "string" },
-          "model_cloud": { "type": "string" },
-          "data_class": { "type": "string" },
-          "contains_identifiers": { "type": "boolean" },
-          "redacted": { "type": "boolean" },
-          "redaction_count": { "type": "number" }
+          "model": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "model_region": {
+            "type": "string"
+          },
+          "model_cloud": {
+            "type": "string"
+          },
+          "data_class": {
+            "type": "string"
+          },
+          "contains_identifiers": {
+            "type": "boolean"
+          },
+          "redacted": {
+            "type": "boolean"
+          },
+          "redaction_count": {
+            "type": "number"
+          }
         }
       },
       "output_schema": {
         "type": "object",
-        "properties": { "result": { "type": "string" } }
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        }
       }
     },
+    "definition_hash": "sha256:f59f39e06537b04c1acf7fa975b3f8a0367f3a468bf600b70bda38318c9f283c",
     "compliance_domain": "internal",
     "requires_baa": false,
     "sensitivity_level": "confidential",
