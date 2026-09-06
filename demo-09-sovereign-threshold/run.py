@@ -17,6 +17,7 @@ import hashlib
 import sys
 
 from wcm import (
+    manifest_identity,
     Ed25519Signer,
     KeyBrokerService,
     Share,
@@ -123,7 +124,16 @@ def main() -> None:
         Ed25519Signer(custodian).sign(manifest.unsigned_dict(), role="custodian", signer="sovereign-customer"),
     ])
     # Each shareholder runs its own KBS holding only its share.
-    kbs_by_holder = [KeyBrokerService({manifest.weights_hash: pack(s)}) for s in shares]
+    # The KBS pins the exact manifest identity it will release for. Without
+    # this the gate refuses, and correctly: a caller-supplied manifest is not
+    # its own trust root, so an unpinned one could name any weights it liked.
+    kbs_by_holder = [
+        KeyBrokerService(
+            {manifest.weights_hash: pack(s)},
+            trusted_manifest_identities=[manifest_identity(manifest)],
+        )
+        for s in shares
+    ]
     # A quorum of two independent parties each attest and release their share.
     quorum = [attested_share(kbs_by_holder[0], manifest), attested_share(kbs_by_holder[2], manifest)]
     print("attested releases  :", len(quorum), "of 3 shareholders (a quorum)")
