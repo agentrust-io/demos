@@ -16,6 +16,7 @@ import hashlib
 import sys
 
 from wcm import (
+    manifest_identity,
     EnclaveSession,
     Ed25519Signer,
     KeyBrokerService,
@@ -139,7 +140,13 @@ def main() -> None:
     print("manifest signature :", verify_manifest(base, ctx).ok, "(jointly signed builder + custodian)")
 
     rule("2. Attestation gate: the key releases only into the certified stack")
-    kbs = KeyBrokerService({base.weights_hash: b"the-model-decryption-key"})
+    # The KBS pins the exact manifest identity it will release for. Without
+    # this the gate refuses, and correctly: a caller-supplied manifest is not
+    # its own trust root, so an unpinned one could name any weights it liked.
+    kbs = KeyBrokerService(
+        {base.weights_hash: b"the-model-decryption-key"},
+        trusted_manifest_identities=[manifest_identity(base)],
+    )
     print("gate released key  :", _release(kbs, base, serving).released)
     print("enforced: genuine attestation nonce, approved platform, and a serving")
     print("image measurement matching what the builder signed.")

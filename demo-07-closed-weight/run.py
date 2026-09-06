@@ -17,6 +17,7 @@ import hashlib
 import sys
 
 from wcm import (
+    manifest_identity,
     Ed25519Signer,
     KeyBrokerService,
     SoftwareProvider,
@@ -112,7 +113,13 @@ def main() -> None:
     print("manifest signature  :", result.ok, "(jointly signed lab + customer)")
 
     rule("2. The key releases ONLY into the attested, lab-signed enclave")
-    kbs = KeyBrokerService({weights_hash: b"the-model-decryption-key"})
+    # The KBS pins the exact manifest identity it will release for. Without
+    # this the gate refuses, and correctly: a caller-supplied manifest is not
+    # its own trust root, so an unpinned one could name any weights it liked.
+    kbs = KeyBrokerService(
+        {weights_hash: b"the-model-decryption-key"},
+        trusted_manifest_identities=[manifest_identity(manifest)],
+    )
     released = kbs.verify_and_release(manifest, _evidence(kbs, serving)).released
     print("approved enclave    : key released =", released)
     print("-> the weights decrypt only inside the measured stack, never on the host.")
