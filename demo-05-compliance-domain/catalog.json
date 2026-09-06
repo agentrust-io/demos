@@ -5,6 +5,7 @@
       "display_name": "Demo Filesystem MCP Server",
       "url": "http://localhost:9001/mcp",
       "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "rotation_mode": "key-pinned",
       "transport": "http-sse"
     },
     "approved_definition": {
@@ -46,6 +47,7 @@
       "display_name": "Demo Filesystem MCP Server",
       "url": "http://localhost:9001/mcp",
       "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "rotation_mode": "key-pinned",
       "transport": "http-sse"
     },
     "approved_definition": {
@@ -83,6 +85,7 @@
       "display_name": "Demo Filesystem MCP Server",
       "url": "http://localhost:9001/mcp",
       "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "rotation_mode": "key-pinned",
       "transport": "http-sse"
     },
     "approved_definition": {

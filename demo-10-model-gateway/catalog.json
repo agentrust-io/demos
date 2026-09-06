@@ -5,6 +5,7 @@
       "display_name": "Model backend",
       "url": "http://localhost:9010/mcp",
       "tls_fingerprint": "SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "rotation_mode": "key-pinned",
       "transport": "http-sse"
     },
     "approved_definition": {
