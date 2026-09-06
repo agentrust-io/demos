@@ -24,17 +24,9 @@
             "type": "string"
           }
         }
-      },
-      "output_schema": {
-        "type": "object",
-        "properties": {
-          "result": {
-            "type": "string"
-          }
-        }
       }
     },
-    "definition_hash": "sha256:7b4738feb4a0c18b2870276996a14d8c2241380c063815cb98b54cb200e7e0d2",
+    "definition_hash": "sha256:a1e420dc7faa479147d132a69f55e12cfdb5f52e215f2bff78a8877924c8322b",
     "compliance_domain": "public",
     "requires_baa": false,
     "sensitivity_level": "public",
@@ -62,17 +54,9 @@
             "type": "string"
           }
         }
-      },
-      "output_schema": {
-        "type": "object",
-        "properties": {
-          "content": {
-            "type": "string"
-          }
-        }
       }
     },
-    "definition_hash": "sha256:3bdb3d438df2208aa5b293e0d71260f808365d6fcef4a9cf44702ebed1acc6cc",
+    "definition_hash": "sha256:b62b2bd456a551a8cc0f70dce71b06e358c73a8f16b8220c1b8fea7ae8b1a0e4",
     "compliance_domain": "public",
     "requires_baa": false,
     "sensitivity_level": "public",
@@ -94,12 +78,13 @@
         "type": "object",
         "properties": {
           "path": {
-            "type": "string"
+            "type": "string",
+            "default": ""
           }
         }
       }
     },
-    "definition_hash": "sha256:215e8f06120f876cb19bb766a54042a31d521b54cf731f6893c975e4e0861e78",
+    "definition_hash": "sha256:b3a1c4bd34d6f8fbb816d7c0ddad7997cdc1f319daba1fd5d1b0fff3821b04c5",
     "compliance_domain": "public",
     "requires_baa": false,
     "sensitivity_level": "public",
