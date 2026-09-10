@@ -7,6 +7,7 @@ Nothing else changes: same SDK, same request shape, same response handling.
 """
 import json
 import sys
+import urllib.error
 import urllib.request
 
 from openai import OpenAI
@@ -74,8 +75,16 @@ def main():
 
     print(BAR)
     print("\nClosing the session and fetching the signed claim...\n")
-    with urllib.request.urlopen(f"{GATEWAY}/trust-record", timeout=20) as r:
-        record = json.loads(r.read())
+    try:
+        with urllib.request.urlopen(f"{GATEWAY}/trust-record", timeout=20) as r:
+            record = json.loads(r.read())
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode(errors="replace")[:300]
+        print(f"  could not fetch the signed claim: HTTP {exc.code} {detail}")
+        print("  Nothing to sign means no call was allowed. Check model-gateway.log for")
+        print("  UPSTREAM_CATALOG_DRIFT: catalog.json and model_server.py must describe")
+        print("  the same tool, or the gateway fail-closes on every call.")
+        return 1
     trace = record.get("trace", {})
     gw = record.get("gateway", {})
     print(f"  policy.bundle_hash   {trace.get('policy', {}).get('bundle_hash', '')}")

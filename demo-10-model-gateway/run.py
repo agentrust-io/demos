@@ -93,7 +93,12 @@ def main():
             while True:
                 time.sleep(1)
         else:
-            subprocess.call([sys.executable, str(HERE / "client.py")], cwd=HERE)
+            # The client's exit code is this demo's exit code. Discarding it kept
+            # CI green through a gateway that denied every call.
+            rc = subprocess.call([sys.executable, str(HERE / "client.py")], cwd=HERE)
+            if rc != 0:
+                print(f"client.py exited with code {rc}. See the *.log files.", file=sys.stderr)
+                return rc
     except KeyboardInterrupt:
         pass
     finally:
