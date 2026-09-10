@@ -87,6 +87,28 @@ def _wait_for_port(port: int, what: str, process=None, timeout: float = 60.0) ->
              + _log_tail(what))
 
 
+def _assert_port_free(port: int, what: str) -> None:
+    """Refuse to start if something already owns the port.
+
+    _wait_for_port() returns as soon as *anything* answers, so a gateway left
+    over from a demo run satisfies it instantly while this console's own
+    gateway dies on a bind error in cmcp.log. The console then scores every
+    assessment against the other gateway's policy bundle and still prints
+    plausible allow/deny lines. Same guard the terminal demos already carry.
+    """
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=1):
+            pass
+    except OSError:
+        return
+    sys.exit(
+        f"Port {port} is already in use, so {what} cannot start and this console "
+        f"would be scored against whatever is already listening. Stop it first "
+        f"(a cMCP gateway left over from another demo is the usual cause), then "
+        f"re-run."
+    )
+
+
 def _ensure_submodule() -> None:
     if (EXAMPLE / "agent" / "credit_risk_agent.py").exists():
         return
@@ -129,6 +151,9 @@ def _write_gateway_config() -> None:
 
 def main() -> None:
     _ensure_submodule()
+    _assert_port_free(8080, "the EU credit-risk MCP server")
+    _assert_port_free(8443, "the cMCP gateway")
+    _assert_port_free(int(PORT), "the web console")
     _write_gateway_config()
     server_log = open(HERE / "server.log", "w")
     cmcp_log = open(HERE / "cmcp.log", "w")

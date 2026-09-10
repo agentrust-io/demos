@@ -68,6 +68,10 @@ def _err(id_, code: int, msg: str) -> dict:
     return {"jsonrpc": "2.0", "id": id_, "error": {"code": code, "message": msg}}
 
 
+# The catalog's approved_definition is the contract. cMCP hashes description +
+# input schema + output schema on both sides and fail-closes on any difference,
+# so this dict and catalog.json's approved_definition must stay identical: an
+# argument the endpoint sends but this schema omits reads as a rug pull.
 TOOL = {
     "name": "model.chat_completion",
     "description": "Run a chat completion against a model in the catalog",
@@ -80,8 +84,19 @@ TOOL = {
             "model_region": {"type": "string"},
             "model_cloud": {"type": "string"},
             "data_class": {"type": "string"},
+            "contains_identifiers": {"type": "boolean"},
             "redacted": {"type": "boolean"},
             "redaction_count": {"type": "number"},
+        },
+    },
+    "outputSchema": {
+        "type": "object",
+        "properties": {
+            "model": {"type": "string"},
+            "region": {"type": "string"},
+            "cloud": {"type": "string"},
+            "content": {"type": "string"},
+            "upstream": {"type": "string"},
         },
     },
 }

@@ -46,13 +46,25 @@
       "output_schema": {
         "type": "object",
         "properties": {
-          "result": {
+          "model": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "cloud": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "upstream": {
             "type": "string"
           }
         }
       }
     },
-    "definition_hash": "sha256:f59f39e06537b04c1acf7fa975b3f8a0367f3a468bf600b70bda38318c9f283c",
+    "definition_hash": "sha256:a1df74a4a40c99c90cdd565e0093e107aec863efc47a135e1a9940b2d7ff9384",
     "compliance_domain": "internal",
     "requires_baa": false,
     "sensitivity_level": "confidential",
