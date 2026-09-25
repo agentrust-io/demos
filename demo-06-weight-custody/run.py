@@ -16,6 +16,7 @@ import hashlib
 import sys
 
 from wcm import (
+    ReleasePolicy,
     manifest_identity,
     EnclaveSession,
     Ed25519Signer,
@@ -30,6 +31,23 @@ from wcm import (
 )
 
 sys.stdout.reconfigure(line_buffering=True)
+
+#: From the release after 0.28.4, a manifest requires cryptographic evidence
+#: verification unless it says otherwise, and GPU confidential-compute mode is
+#: met only by a verified GPU report. This demo runs on mock attestation, which
+#: nothing can verify, so its manifests waive both explicitly. On 0.28.4 the
+#: field does not exist and the waivers are left out.
+_REQUIRES_VERIFICATION = "require_evidence_verification" in ReleasePolicy.model_fields
+
+
+def waive_mock_verification(doc: dict) -> dict:
+    if _REQUIRES_VERIFICATION:
+        policy = doc["release_policy"]
+        policy["require_evidence_verification"] = False
+        gpu = policy.get("required_gpu_measurement")
+        if gpu is not None:
+            gpu["require_cc_mode"] = False
+    return doc
 
 
 def rule(title: str) -> None:
@@ -128,7 +146,7 @@ def main() -> None:
         org="frontier-labs",
         derivatives="fine-tune-only",
     )
-    base = WeightCustodyManifest.model_validate(base_doc)
+    base = WeightCustodyManifest.model_validate(waive_mock_verification(base_doc))
     base = base.with_signatures([
         sign(base, builder, "builder", "frontier-labs"),
         sign(base, custodian, "custodian", "enterprise-governance"),
@@ -171,7 +189,7 @@ def main() -> None:
         derived_from=base.weights_hash,
         rights_holder={"base": "frontier-labs", "derivative": "enterprise"},
     )
-    deriv = WeightCustodyManifest.model_validate(deriv_doc)
+    deriv = WeightCustodyManifest.model_validate(waive_mock_verification(deriv_doc))
     deriv = deriv.with_signatures([
         sign(deriv, builder, "builder", "enterprise-governance"),
         sign(deriv, custodian, "custodian", "enterprise-governance"),
