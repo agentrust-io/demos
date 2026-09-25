@@ -3,7 +3,8 @@ const $ = (s) => document.querySelector(s);
 const api = async (path, body) => (await fetch(path, body
   ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
   : {})).json();
-const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+// Quotes too: several values land inside attribute values, not only text.
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 let CTX = null;
 let selected = "clean";
@@ -24,11 +25,11 @@ async function boot() {
 
   // scenarios
   $("#scenarios").innerHTML = CTX.scenarios.map((s) => `
-    <button class="scn${s.id === selected ? " sel" : ""}" data-id="${s.id}">
+    <button class="scn${s.id === selected ? " sel" : ""}" data-id="${esc(s.id)}">
       <div class="label">${esc(s.label)}</div>
       <div class="obligor">${esc(s.obligor)}</div>
       <div class="amt">${esc(s.amount)}</div>
-      <span class="exp ${s.outcome}">${esc(s.expect)}</span>
+      <span class="exp ${esc(s.outcome)}">${esc(s.expect)}</span>
     </button>`).join("");
   document.querySelectorAll(".scn").forEach((c) => c.addEventListener("click", () => {
     selected = c.dataset.id;
@@ -51,7 +52,7 @@ async function boot() {
 
   // tools
   $("#tools").innerHTML = CTX.tools.map((t) =>
-    `<div class="trow"><code>${esc(t.tool_name)}</code><span class="dom ${t.compliance_domain}">${esc(t.compliance_domain)}</span><span class="desc">${esc(t.description)}</span></div>`).join("");
+    `<div class="trow"><code>${esc(t.tool_name)}</code><span class="dom ${esc(t.compliance_domain)}">${esc(t.compliance_domain)}</span><span class="desc">${esc(t.description)}</span></div>`).join("");
 }
 
 function renderVariant() {
