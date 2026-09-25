@@ -42,6 +42,11 @@ def _policy_hashes() -> dict[str, str]:
         _HASHES["tampered"] = policy_variants.bundle_hash(tampered_dir)
     return _HASHES
 
+# Names the console answers to. Anything else in Host is a rebinding attempt.
+LOOPBACK_NAMES = ("localhost", "127.0.0.1", "[::1]")
+# The UI posts a few dozen bytes; nothing legitimate comes close to this.
+MAX_BODY = 64 * 1024
+
 _CT = {".html": "text/html", ".js": "text/javascript", ".css": "text/css",
        ".svg": "image/svg+xml", ".json": "application/json"}
 
@@ -183,6 +188,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if not self._local_request():
+            return
         if self.path in ("/", "/index.html"):
             return self._serve("index.html")
         if self.path.startswith("/web/"):
@@ -201,9 +208,56 @@ class Handler(BaseHTTPRequestHandler):
             })
         return self._send(404, {"error": "not found"})
 
+    def _local_request(self) -> bool:
+        """Refuse requests a browser page from another site could have sent.
+
+        Loopback is not a boundary against the presenter's own browser: any open
+        page can POST a CORS-safelisted text/plain body here without a preflight,
+        and a DNS-rebinding page arrives with its own name in Host. /api/run
+        spawns the agent and can start a second gateway, so both are refused.
+        """
+        port = self.server.server_address[1]
+        allowed = {f"{h}:{port}" for h in LOOPBACK_NAMES}
+        if self.headers.get("Host", "").lower() not in allowed:
+            self._send(403, {"error": "host not allowed"})
+            return False
+        origin = self.headers.get("Origin")
+        if origin is not None and origin.lower() not in {f"http://{a}" for a in allowed}:
+            self._send(403, {"error": "cross-origin request refused"})
+            return False
+        return True
+
+    def _read_json(self):
+        """The request body as a JSON object, or None after sending the error."""
+        ctype = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+        if ctype != "application/json":
+            self._send(415, {"error": "Content-Type must be application/json"})
+            return None
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = -1
+        if length < 0:
+            self._send(400, {"error": "bad Content-Length"})
+            return None
+        if length > MAX_BODY:
+            self._send(413, {"error": "request body too large"})
+            return None
+        try:
+            payload = json.loads(self.rfile.read(length) or b"{}")
+        except (ValueError, RecursionError):  # bad UTF-8, bad JSON, or nested past the stack
+            payload = None
+        if not isinstance(payload, dict):
+            self._send(400, {"error": "request body must be a JSON object"})
+            return None
+        return payload
+
     def do_POST(self):
-        length = int(self.headers.get("Content-Length", 0))
-        payload = json.loads(self.rfile.read(length) or b"{}") if length else {}
+        if not self._local_request():
+            return
+        payload = self._read_json()
+        if payload is None:
+            return
         if self.path == "/api/run":
             scenario = payload.get("scenario", "clean")
             variant = payload.get("variant", "approved")

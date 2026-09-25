@@ -39,18 +39,45 @@ def _err(id_, code: int, msg: str) -> dict:
     return {"jsonrpc": "2.0", "id": id_, "error": {"code": code, "message": msg}}
 
 
+# Loopback names the gateway uses to reach this server (catalog url is
+# http://localhost:9001/mcp). Anything else in Host is a DNS-rebinding page.
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "[::1]"}
+
+
+def _host_name(host: str) -> str:
+    host = host.lower()
+    if host.startswith("["):
+        return host.split("]")[0] + "]"
+    return host.split(":")[0]
+
+
 async def handle(request: Request) -> JSONResponse:
+    if _host_name(request.headers.get("host", "")) not in _LOCAL_HOSTS:
+        return JSONResponse(_err(None, -32600, "host not allowed"), status_code=403)
     if request.method == "GET":
         return JSONResponse({"status": "ok"})
+
+    # The gateway always posts application/json. Requiring it means a page in
+    # the presenter's browser cannot write_file here with a text/plain "simple"
+    # request, which needs no CORS preflight.
+    ctype = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    if ctype != "application/json":
+        return JSONResponse(_err(None, -32600, "Content-Type must be application/json"),
+                            status_code=415)
 
     try:
         body = await request.json()
     except Exception:
         return JSONResponse(_err(None, -32700, "parse error"), status_code=400)
 
+    if not isinstance(body, dict):
+        return JSONResponse(_err(None, -32600, "request must be a JSON object"), status_code=400)
     id_ = body.get("id")
     method = body.get("method", "")
     params = body.get("params", {})
+    if not isinstance(params, dict) or not isinstance(params.get("arguments", {}), dict):
+        return JSONResponse(_err(id_, -32600, "params and arguments must be objects"),
+                            status_code=400)
 
     if method == "initialize":
         return JSONResponse({

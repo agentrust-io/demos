@@ -28,11 +28,13 @@ jobs:
         with:
           python-version: "3.11"
 
-      # requirements.txt is the single source of truth: it already pins both
-      # cmcp-runtime (demos 1-5) and weight-custody-manifest (demos 6-9).
-      # Installing cmcp-runtime alone silently left the WCM demos unrunnable.
+      # requirements.txt holds the floors for cmcp-runtime (demos 1-5) and
+      # weight-custody-manifest (demos 6-9); installing cmcp-runtime alone once
+      # left the WCM demos unrunnable. requirements/ci.txt is that file plus
+      # pytest and httpx, resolved and hash-locked, so CI installs exactly what
+      # was reviewed.
       - name: Install demo dependencies
-        run: pip install -r requirements.txt
+        run: pip install --require-hashes -r requirements/ci.txt
 
       - name: Validate web console examples submodule
         run: |
@@ -45,9 +47,7 @@ jobs:
       # test_catalog_definition_drift catches a catalog that no longer matches
       # its upstream server, which the gateway treats as a rug pull and denies.
       - name: Tests
-        run: |
-          pip install pytest
-          python -m pytest tests/ -q
+        run: python -m pytest tests/ -q
 
       # Run in order: demo-01 produces workspace/trace-claim.json, which
       # demo-02 and demo-03 consume.

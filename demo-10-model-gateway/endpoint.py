@@ -43,6 +43,9 @@ REDACTIONS = [
     ("EMAIL", re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.]{2,}\b")),
 ]
 
+# The classes policies/allow.cedar knows, lowest to highest.
+DATA_CLASSES = frozenset({"public", "pii", "confidential", "hipaa_phi"})
+
 # Sessions we have opened on the gateway, and the records they produced.
 STATE = {"session_id": None, "records": []}
 
@@ -72,20 +75,40 @@ def redact(text):
     return text, hits
 
 
+def _bad_request(message):
+    return JSONResponse({"error": {"message": message, "type": "invalid_request_error",
+                                   "code": "INVALID_REQUEST"}}, status_code=400)
+
+
 def _prompt_of(messages):
     return "\n".join(m.get("content", "") for m in messages if isinstance(m, dict))
 
 
 async def chat_completions(request: Request) -> JSONResponse:
     """The OpenAI surface. Same request and response shape the SDK expects."""
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        return _bad_request("request body is not valid JSON")
+    if not isinstance(body, dict):
+        return _bad_request("request body must be a JSON object")
     model = body.get("model", "regional-small")
     messages = body.get("messages", [])
+    if not isinstance(model, str) or not isinstance(messages, list) or not all(
+            isinstance(m, dict) and isinstance(m.get("content", ""), str) for m in messages):
+        return _bad_request("model must be a string and messages a list of "
+                            "{role, content} objects with string content")
 
     # The class is decided by the routing layer, not by the caller: an upstream
     # classifier decides, this endpoint receives that decision and enforces it.
     data_class = (request.headers.get("x-data-class")
                   or body.get("data_class") or "confidential")
+    # The Cedar bundle forbids by naming classes, so a label it does not name
+    # (a typo, a different case) would match no forbid and leave the region
+    # under the permit. Refuse it here rather than fail open.
+    if data_class not in DATA_CLASSES:
+        return _bad_request(f"unknown data class {data_class!r}; "
+                            f"expected one of {sorted(DATA_CLASSES)}")
     placement = MODELS.get(model, {"region": "unknown", "cloud": "unknown"})
     region, cloud = placement["region"], placement["cloud"]
 
