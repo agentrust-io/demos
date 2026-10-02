@@ -1,3 +1,7 @@
+> **Moved:** Current development, issues, and pull requests are in [agentrust-io/integrations/demos](https://github.com/agentrust-io/integrations/tree/main/demos). This repository retains historical commits, releases, and issue links.
+>
+> Clone `https://github.com/agentrust-io/integrations.git` and use the `demos/` directory. The original license remains in that directory.
+
 # agentrust-io demos
 
 Community updates and contributor highlights: [AgenTrust on LinkedIn](https://www.linkedin.com/company/agentrust-io/).
